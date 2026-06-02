@@ -33,7 +33,7 @@ mail-system-backend is running
 - Spring Boot 3.2.5
 - Maven
 - MySQL 8.x
-- MyBatis 或 MyBatis Plus，后续实现数据库访问时引入
+- MyBatis
 - Apifox 或类似 HTTP 工具用于接口测试
 
 第一阶段不提前引入 Redis、WebSocket、完整 Spring Security 或 AI SDK。登录鉴权优先使用简单 token 方案。
@@ -53,7 +53,8 @@ mail-system-backend
 │  ├─ database.md
 │  └─ git-workflow.md
 ├─ sql
-│  └─ schema.sql
+│  ├─ schema.sql
+│  └─ init-data.sql
 └─ src
    └─ main
       ├─ java
@@ -86,7 +87,6 @@ P0：
 
 P1：
 
-- 用户搜索。
 - 用户设置和 AI 配置状态。
 - 已删除列表、垃圾邮箱、侧边栏统计。
 - 搜索、过滤、优先级、风险等级和分析字段展示。
@@ -114,10 +114,11 @@ mvn -version
 
 ## Database Initialization
 
-数据库结构维护在：
+数据库结构和初始化数据维护在：
 
 ```text
 sql/schema.sql
+sql/init-data.sql
 ```
 
 当前核心表：
@@ -135,6 +136,14 @@ mysql -u root -p < sql/schema.sql
 ```
 
 注意：当前 `schema.sql` 是开发环境重建脚本，会删除并重建核心表。执行前确认本地数据可以清空。
+
+导入测试账号和默认用户设置：
+
+```bash
+mysql -u root -p < sql/init-data.sql
+```
+
+默认测试用户包括 `admin`、`alice`、`bob`，默认密码均为 `123456`。
 
 ## Configuration
 
@@ -248,7 +257,6 @@ Authorization: Bearer <token>
 | POST | `/api/auth/login` | P0 |
 | POST | `/api/auth/logout` | P0，可选后端实现 |
 | GET | `/api/users/me` | P0 |
-| GET | `/api/users/search` | P1 |
 | PUT | `/api/users/password` | P2 |
 | GET | `/api/users/settings` | P1 |
 | PUT | `/api/users/settings` | P1 |
@@ -324,7 +332,7 @@ fix(mail): fix mail detail permission check
 | `feature/p0-mail-send` | P0 | 发送邮件、收件人校验、邮件主体和收件关系写入、默认分析状态 | `POST /api/mails` |
 | `feature/p0-mail-list` | P0 | 收件箱、已发送列表、基础分页、基础排序 | `GET /api/mails/inbox`、`GET /api/mails/sent` |
 | `feature/p0-mail-detail-status` | P0 | 邮件详情权限、详情自动已读、显式标记已读、收件人侧逻辑删除 | `GET /api/mails/{mailId}`、`PATCH /api/mails/{mailId}/read`、`DELETE /api/mails/{mailId}` |
-| `feature/p1-user-settings` | P1 | 用户搜索、用户设置、AI 配置状态读写和脱敏展示 | `GET /api/users/search`、`GET /api/users/settings`、`PUT /api/users/settings` |
+| `feature/p1-user-settings` | P1 | 用户设置、AI 配置状态读写和脱敏展示 | `GET /api/users/settings`、`PUT /api/users/settings` |
 | `feature/p1-mail-enhancement` | P1 | 已删除列表、垃圾邮箱、统计数量、列表搜索过滤、分析字段展示 | `GET /api/mails/trash`、`GET /api/mails/spam`、`GET /api/mails/statistics`、列表筛选参数 |
 | `feature/p2-optional` | P2 | 修改密码、恢复邮件、重新分析邮件 | `PUT /api/users/password`、`PATCH /api/mails/{mailId}/restore`、`POST /api/mails/{mailId}/analysis/retry` |
 

@@ -109,7 +109,6 @@ P1 用于让前端页面更完整，建议在 P0 跑通后实现。
 
 推荐实现：
 
-- 搜索用户：`GET /api/users/search`
 - 用户设置和 AI 配置状态：`GET /api/users/settings`
 - 更新用户设置和 AI 配置：`PUT /api/users/settings`
 - 已删除列表：`GET /api/mails/trash`
@@ -118,7 +117,7 @@ P1 用于让前端页面更完整，建议在 P0 跑通后实现。
 - 收件箱、已发送、已删除、垃圾邮箱的搜索与过滤参数
 - 邮件列表和详情中的分析字段
 
-P1 搜索与过滤范围以 `docs/api.md` 第 17 节为准。
+P1 搜索与过滤范围以 `docs/api.md` 第 15 节为准。当前最终版不单独提供 `/api/users/search`，写邮件时直接输入 `recipientUsername`。
 
 ## 5. P2 后置范围
 
