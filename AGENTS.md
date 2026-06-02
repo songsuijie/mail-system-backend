@@ -106,9 +106,11 @@ Do not scatter important project files randomly in the project root.
 
 ## 5. MVP Scope
 
-The first MVP should complete the basic mail system workflow.
+The current API contract is defined by docs/api.md and has the highest priority.
 
-Required MVP features:
+The first version should follow the P0 / P1 / P2 priority model in docs/api.md.
+
+P0 required features:
 
 1. User registration
 2. User login
@@ -120,81 +122,77 @@ Required MVP features:
 8. Mark mail as read
 9. Delete mail logically
 
-The MVP should prove this workflow:
+P1 recommended features after P0 is stable:
 
-A user can register and log in.
-A logged-in user can send a mail to another existing user.
-The recipient can see the mail in the inbox.
-The sender can see the mail in the sent list.
-The recipient or sender can view mail detail.
-The recipient can mark the mail as read.
-The recipient can delete the mail from the inbox logically.
+1. Search users
+2. User settings and AI configuration status
+3. Query deleted mails
+4. Query spam mailbox
+5. Mailbox statistics
+6. Search and filter mail lists
+7. Return analysis fields for list and detail pages
 
-## 6. Features Not Required in the First MVP
+P2 optional features:
 
-Do not implement the following features in the first MVP unless explicitly requested:
+1. Change password
+2. Restore deleted mail
+3. Retry mail analysis
 
-1. AI mail summary
-2. AI auto reply
-3. AI mail classification
-4. Semantic mail search
-5. WebSocket real-time notification
-6. Complex admin management
-7. Complex role-based permission system
-8. Full Spring Security integration
-9. Attachment upload
-10. Mail recall
-11. Mail group sending
-12. Complex trash recovery
-13. Complex folder system
+The MVP should first prove the P0 workflow, then add P1 features for a fuller frontend demo.
 
-These features can be reserved as future extension points, but should not block the first MVP.
+## 6. Features Not Required in P0
+
+Do not implement the following features before the P0 workflow is stable unless explicitly requested:
+
+1. Attachment upload
+2. Multiple recipients
+3. CC
+4. BCC
+5. Draft mail
+6. Mail recall
+7. WebSocket real-time notification
+8. Complex admin management
+9. Complex role-based permission system
+10. Full Spring Security integration
+11. Redis token management
+12. Semantic search
+13. Streaming AI output
+14. AI thinking display
+15. Native Claude protocol support
+16. Multiple model configurations
+
+User settings, spam mailbox, deleted mailbox, mailbox statistics, search filters, and analysis result fields are P1 according to docs/api.md.
 
 ## 7. Optional Features
 
-The following features are optional and should only be implemented after the required MVP is stable:
+The following features are optional and should only be implemented after P0 and required P1 work is stable:
 
-1. Mail search by keyword
-2. Draft mail
-3. Multiple recipients
-4. CC
-5. BCC
-6. Attachments
-7. Starred mails
-8. Trash box
-9. Mail labels
-10. AI-related features
+1. Draft mail
+2. Multiple recipients
+3. CC
+4. BCC
+5. Attachments
+6. Starred mails
+7. Mail labels
+8. Restore deleted mail
+9. Retry mail analysis
 
-If time is limited, prioritize required MVP features over optional features.
+If time is limited, prioritize docs/api.md P0 features first.
 
-## 8. AI Extension Principle
+## 8. AI and Analysis Principle
 
-The team wants to reserve space for AI features because AI may help improve the final score.
+docs/api.md already includes user settings, analysis status, priority, spam level, risk level, summary, and reply suggestions.
 
-However, AI should not be forced into the first backend MVP.
+These features should be treated as enhancement features. The basic mail workflow must still work when AI is disabled, not configured, unavailable, or failed.
 
-The first version should reserve clean extension points.
+Recommended first-version approach:
 
-Possible future AI features:
+1. Save mail body and recipient status first.
+2. Create a default or rule-based analysis result.
+3. If user settings enable AI and the model is configured, call the OpenAI Compatible model.
+4. If model calling fails, store the failure or degraded result without affecting mail sending.
 
-1. AI mail summary
-2. AI reply suggestion
-3. AI mail classification
-4. AI spam detection
-5. Semantic mail search
-6. RAG-based mail knowledge search
-
-Do not write AI logic directly into the basic mail sending process.
-
-If AI is added later, prefer a separate module or service layer, for example:
-
-- ai
-- ai.service
-- mail.ai
-- summary
-- semantic.search
-
-The basic mail module should still work even if AI features are disabled.
+Do not provide AI test connection APIs, provider list APIs, streaming output, AI thinking display, native Claude protocol support, or multiple model configuration in the current version unless explicitly requested.
 
 ## 9. Recommended Backend Tech Stack
 
@@ -286,19 +284,27 @@ Do not design the mail system with only one simple mail table if it will make la
 Recommended core tables:
 
 1. sys_user
-2. mail_message
-3. mail_recipient
+2. user_settings
+3. mail_message
+4. mail_recipient
+5. mail_analysis
 
 Table responsibilities:
 
 sys_user:
 Stores user account information.
 
+user_settings:
+Stores user settings and AI model configuration status.
+
 mail_message:
 Stores the main body of the mail, including sender, subject, content, and send time.
 
 mail_recipient:
-Stores recipient-specific information, including recipient id, read status, read time, recipient-side deleted status, and recipient type.
+Stores recipient-specific information, including recipient id, read flag, read time, deleted flag, deleted time, spam status, risk level, and recipient type.
+
+mail_analysis:
+Stores rule-based, machine-learning, or AI analysis results, including analysis status, priority, spam level, risk level, summary, and reply suggestions.
 
 Important rule:
 
@@ -312,6 +318,7 @@ Therefore:
 
 mail_message stores the shared mail body.
 mail_recipient stores each recipient's personal mail status.
+mail_analysis stores analysis results for list and detail display.
 
 ## 12. Recommended Core Tables
 
@@ -327,9 +334,9 @@ Recommended fields:
 
 - id
 - username
-- password
+- password_hash
 - nickname
-- email
+- email_address
 - status
 - created_at
 - updated_at
@@ -338,9 +345,39 @@ Recommended fields:
 Rules:
 
 - username should be unique.
-- password should not be stored in plain text in the final version.
+- password_hash should not store plain text passwords.
 - deleted should be used for logical deletion.
 - status can represent normal or disabled users.
+
+### user_settings
+
+Purpose:
+
+Store user-level settings and AI model configuration status.
+
+Recommended fields:
+
+- id
+- user_id
+- ai_enabled
+- auto_reply_enabled
+- priority_sort_enabled
+- provider
+- base_url
+- model_name
+- api_key_encrypted
+- api_key_mask
+- timeout_ms
+- max_tokens
+- temperature
+- created_at
+- updated_at
+
+Rules:
+
+- Do not return the complete API key from GET /api/users/settings.
+- api_key_encrypted must be stored securely.
+- modelConfigured can be derived from provider, base_url, model_name, and api_key_encrypted.
 
 ### mail_message
 
@@ -354,19 +391,19 @@ Recommended fields:
 - sender_id
 - subject
 - content
-- send_time
+- sent_at
 - status
+- sender_deleted
 - created_at
 - updated_at
-- deleted
 
 Rules:
 
 - sender_id references sys_user.id.
 - subject should not be empty.
 - content should not be empty.
-- send_time records the actual sending time.
-- deleted can be used for sender-side logical deletion if needed.
+- sent_at records the actual sending time and maps to API field sentAt.
+- sender_deleted is reserved for sender-side logical deletion if needed.
 
 ### mail_recipient
 
@@ -380,9 +417,13 @@ Recommended fields:
 - mail_id
 - recipient_id
 - recipient_type
-- read_status
-- read_time
-- deleted
+- read_flag
+- read_at
+- deleted_flag
+- deleted_at
+- spam_flag
+- spam_level
+- risk_level
 - created_at
 - updated_at
 
@@ -390,9 +431,45 @@ Rules:
 
 - mail_id references mail_message.id.
 - recipient_id references sys_user.id.
-- read_status: 0 means unread, 1 means read.
-- deleted: 0 means not deleted, 1 means deleted by recipient.
+- read_flag: 0 means unread, 1 means read.
+- deleted_flag: 0 means not deleted, 1 means deleted by recipient.
 - recipient_type can reserve space for normal recipient, CC, and BCC.
+
+### mail_analysis
+
+Purpose:
+
+Store analysis results for mail list and detail pages.
+
+Recommended fields:
+
+- id
+- mail_id
+- recipient_id
+- analysis_status
+- priority
+- priority_score
+- priority_reason
+- spam_flag
+- spam_score
+- spam_level
+- spam_reason
+- risk_level
+- risk_score
+- risk_reason
+- summary
+- reply_suggestions
+- ai_provider
+- model_name
+- ai_error_message
+- created_at
+- updated_at
+
+Rules:
+
+- AI failures must not affect mail sending.
+- List pages return only display and filter fields.
+- Detail pages return the complete analysis object.
 
 ## 13. SQL File Rules
 
@@ -424,13 +501,23 @@ Recommended first-version APIs:
 
 POST   /api/auth/register
 POST   /api/auth/login
+POST   /api/auth/logout
 GET    /api/users/me
+GET    /api/users/search
+PUT    /api/users/password
+GET    /api/users/settings
+PUT    /api/users/settings
 POST   /api/mails
 GET    /api/mails/inbox
 GET    /api/mails/sent
+GET    /api/mails/trash
+GET    /api/mails/spam
 GET    /api/mails/{mailId}
 PATCH  /api/mails/{mailId}/read
 DELETE /api/mails/{mailId}
+PATCH  /api/mails/{mailId}/restore
+GET    /api/mails/statistics
+POST   /api/mails/{mailId}/analysis/retry
 
 Follow docs/api.md as the final API source of truth.
 
@@ -445,19 +532,25 @@ All backend APIs should return a unified response format.
 Recommended format:
 
 {
-  "code": 200,
+  "code": 0,
   "message": "success",
   "data": {}
 }
 
-Recommended status codes:
+Recommended business error codes follow docs/api.md:
 
-200: success
-400: bad request or invalid parameter
-401: not logged in or invalid token
-403: no permission
-404: resource not found
-500: internal server error
+0: success
+40000: invalid parameter
+40001: username or password error
+40002: not logged in or invalid token
+40003: no permission
+40004: resource not found
+40005: username already exists
+40006: recipient does not exist
+40007: mail subject cannot be empty
+40008: mail content cannot be empty
+50000: internal server error
+50001: AI analysis failed but must not affect the main mail workflow
 
 Do not return random response formats from different controllers.
 
@@ -494,21 +587,24 @@ Mail detail permission:
 Inbox query:
 
 - A user can only query mails where mail_recipient.recipient_id equals current user id.
-- Deleted recipient records should not appear in the normal inbox.
+- Records with mail_recipient.deleted_flag = 1 should not appear in the normal inbox.
+- Records with mail_recipient.spam_flag = 1 should not appear in the normal inbox.
 
 Sent mail query:
 
 - A user can only query mails where mail_message.sender_id equals current user id.
+- Sent mails are not affected by recipient-side deleted_flag.
 
 Mark as read:
 
 - Only the recipient can mark a received mail as read.
 - The sender should not mark recipient read status.
+- GET /api/mails/{mailId} should automatically mark the mail as read when the current user is the recipient and the mail is unread.
 
 Delete mail:
 
 - First MVP should use logical deletion.
-- Recipient delete should update mail_recipient.deleted.
+- Recipient delete should update mail_recipient.deleted_flag and mail_recipient.deleted_at.
 - Do not physically delete mail records in the first MVP.
 
 ## 18. README Rules
@@ -658,22 +754,21 @@ target/
 
 Current priority order:
 
-1. Complete docs/mvp.md
-2. Complete docs/database.md
-3. Complete sql/schema.sql
-4. Complete docs/api.md
-5. Complete README.md
-6. Complete docs/git-workflow.md
-7. Implement user registration and login
-8. Implement mail sending
-9. Implement inbox query
-10. Implement sent mail query
-11. Implement mail detail
-12. Implement read status
-13. Implement logical delete
-14. Use Apifox to test all core APIs
+1. Keep docs/api.md as the highest-priority API contract.
+2. Keep docs/mvp.md, docs/prd.md, docs/database.md, sql/schema.sql, README.md, and AGENTS.md aligned with docs/api.md.
+3. Implement P0: user registration and login.
+4. Implement P0: current user information.
+5. Implement P0: send mail.
+6. Implement P0: inbox query.
+7. Implement P0: sent mail query.
+8. Implement P0: mail detail with automatic read behavior.
+9. Implement P0: explicit read status update.
+10. Implement P0: recipient-side logical delete.
+11. Use Apifox to test all P0 APIs.
+12. Implement P1 features after P0 is stable: search users, user settings, deleted list, spam mailbox, statistics, filters, and analysis fields.
+13. Implement P2 features only if time allows.
 
-Do not jump to AI features before the basic mail workflow works.
+Do not make AI model calls block or break the basic mail workflow.
 
 ## 24. Definition of Done
 

@@ -2,21 +2,20 @@
 
 华南理工大学软件开发综合实训“邮件系统”后端项目。
 
-本仓库当前目标是先完成第一版后端 MVP：使用 Spring Boot 提供一套基于 HTTP 的站内邮件后端接口，让同一系统内的用户可以完成注册、登录、发送邮件、查看收件箱、查看已发送、查看详情、标记已读和逻辑删除等基础流程。
+当前目标是完成一个基于 Spring Boot 的站内邮件系统后端：用户可以注册、登录、发送邮件、查看收件箱、查看已发送、查看详情、标记已读、逻辑删除邮件，并为已删除列表、垃圾邮箱、统计、用户设置和邮件分析结果预留实现空间。
 
-实训 PDF 中提到 SMTP、POP3、IMAP、附件、搜索、通知、同步、AI 插件等方向。当前 MVP 阶段先实现可运行、可测试、可演示的基础闭环；附件、搜索、通知、AI 插件等能力作为后续扩展，不阻塞第一版。
+接口契约以 `docs/api.md` 为最高优先级。
 
 ## Current Stage
 
 当前仓库处于后端 MVP 起步阶段：
 
-- 已完成项目基础骨架
-- 已完成核心文档
-- 已完成第一版数据库建表 SQL
-- 已提供健康检查接口
-- 后续将按 `docs/mvp.md` 和 `docs/api.md` 实现核心业务接口
+- 已有 Spring Boot 基础骨架。
+- 已有健康检查接口。
+- 已更新 API、MVP、PRD、数据库设计和建表 SQL。
+- 后续开发应先实现 P0 接口，再补齐 P1。
 
-当前已存在的接口：
+当前已有接口：
 
 ```http
 GET /api/health
@@ -34,10 +33,10 @@ mail-system-backend is running
 - Spring Boot 3.2.5
 - Maven
 - MySQL 8.x
-- MyBatis 或 MyBatis Plus（后续实现数据库访问时引入）
+- MyBatis 或 MyBatis Plus，后续实现数据库访问时引入
 - Apifox 或类似 HTTP 工具用于接口测试
 
-第一版 MVP 不提前引入 Redis、Spring Security、WebSocket 或 AI SDK。登录鉴权优先使用简单 token 方案，后续稳定后再考虑 JWT、Redis 或完整 Spring Security。
+第一阶段不提前引入 Redis、WebSocket、完整 Spring Security 或 AI SDK。登录鉴权优先使用简单 token 方案。
 
 ## Directory Structure
 
@@ -48,10 +47,10 @@ mail-system-backend
 ├─ pom.xml
 ├─ docs
 │  ├─ 00-index.md
-│  ├─ 2026年实训要求.pdf
-│  ├─ mvp.md
-│  ├─ database.md
 │  ├─ api.md
+│  ├─ mvp.md
+│  ├─ prd.md
+│  ├─ database.md
 │  └─ git-workflow.md
 ├─ sql
 │  └─ schema.sql
@@ -59,47 +58,46 @@ mail-system-backend
    └─ main
       ├─ java
       │  └─ com/scut/mailsystem
+      │     ├─ common
+      │     ├─ config
+      │     ├─ controller
+      │     ├─ dto
+      │     ├─ entity
+      │     ├─ exception
+      │     ├─ mapper
+      │     ├─ service
+      │     ├─ utils
+      │     └─ vo
       └─ resources
-         └─ application.yml
+         ├─ application.yml
+         └─ mapper
 ```
-
-目录说明：
-
-- `docs/`：项目需求、MVP 范围、数据库、API 和协作文档
-- `sql/`：数据库建表和初始化脚本
-- `src/`：后端源代码
-- `README.md`：项目启动和演示入口
-- `AGENTS.md`：Codex 协作规则和项目约束
 
 ## MVP Scope
 
-第一版 MVP 必须完成以下后端能力：
+按 `docs/api.md` 的优先级开发：
 
-1. 用户注册
-2. 用户登录
-3. 获取当前登录用户信息
-4. 发送站内邮件
-5. 查询收件箱
-6. 查询已发送邮件
-7. 查询邮件详情
-8. 标记邮件为已读
-9. 逻辑删除收件箱邮件
+P0：
 
-第一版暂不实现：
+- 用户注册、登录、当前用户信息。
+- 发送邮件。
+- 收件箱、已发送、邮件详情。
+- 标记已读、逻辑删除。
 
-- 外部 SMTP、POP3、IMAP 邮件服务器互通
-- 附件上传和预览
-- 多收件人、抄送、密送
-- WebSocket 实时通知
-- 复杂管理员和权限系统
-- Redis token 管理
-- AI 邮件摘要、分类、垃圾邮件识别等功能
+P1：
 
-详细范围以 `docs/mvp.md` 为准。
+- 用户搜索。
+- 用户设置和 AI 配置状态。
+- 已删除列表、垃圾邮箱、侧边栏统计。
+- 搜索、过滤、优先级、风险等级和分析字段展示。
+
+P2：
+
+- 修改密码。
+- 恢复邮件。
+- 重新分析邮件。
 
 ## Environment Requirements
-
-本地开发建议环境：
 
 - JDK 17
 - Maven 3.8+
@@ -122,35 +120,31 @@ mvn -version
 sql/schema.sql
 ```
 
-当前第一版核心表：
+当前核心表：
 
 - `sys_user`
+- `user_settings`
 - `mail_message`
 - `mail_recipient`
+- `mail_analysis`
 
-初始化数据库：
+初始化或重建数据库：
 
 ```bash
 mysql -u root -p < sql/schema.sql
 ```
 
-脚本会创建数据库：
-
-```text
-mail_system
-```
-
-当前 SQL 使用逻辑外键，不强制添加数据库级外键约束。表关系和字段语义以 `docs/database.md` 为准。
+注意：当前 `schema.sql` 是开发环境重建脚本，会删除并重建核心表。执行前确认本地数据可以清空。
 
 ## Configuration
 
-当前基础配置文件：
+基础配置文件：
 
 ```text
 src/main/resources/application.yml
 ```
 
-现有配置：
+当前配置：
 
 ```yaml
 server:
@@ -161,9 +155,9 @@ spring:
     name: mail-system-backend
 ```
 
-后续接入 MySQL 时，应在 `application.yml` 或本地专用配置中补充数据源配置。不要提交真实数据库密码、私有 token 或 API key。
+后续接入 MySQL 时，在本地配置中补充数据源。不要提交真实数据库密码、私有 token 或 API Key。
 
-示例格式：
+示例：
 
 ```yaml
 spring:
@@ -208,57 +202,81 @@ API 契约维护在：
 docs/api.md
 ```
 
-第一版计划接口：
-
-```http
-POST   /api/auth/register
-POST   /api/auth/login
-GET    /api/users/me
-POST   /api/mails
-GET    /api/mails/inbox
-GET    /api/mails/sent
-GET    /api/mails/{mailId}
-PATCH  /api/mails/{mailId}/read
-DELETE /api/mails/{mailId}
-GET    /api/health
-```
-
-除注册、登录和健康检查外，业务接口通过以下请求头携带登录凭证：
-
-```http
-Authorization: Bearer <token>
-```
-
-统一响应格式：
+统一成功响应：
 
 ```json
 {
-  "code": 200,
+  "code": 0,
   "message": "success",
   "data": {}
 }
 ```
 
+统一分页响应：
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "page": 1,
+    "size": 10,
+    "total": 26,
+    "totalPages": 3,
+    "records": []
+  }
+}
+```
+
+业务接口除注册、登录、健康检查外，需要携带：
+
+```http
+Authorization: Bearer <token>
+```
+
+时间字段统一返回 ISO 8601 字符串，例如：
+
+```text
+2026-05-25T16:04:00
+```
+
+## Core API List
+
+| 方法 | 接口 | 优先级 |
+| --- | --- | --- |
+| POST | `/api/auth/register` | P0 |
+| POST | `/api/auth/login` | P0 |
+| POST | `/api/auth/logout` | P0，可选后端实现 |
+| GET | `/api/users/me` | P0 |
+| GET | `/api/users/search` | P1 |
+| PUT | `/api/users/password` | P2 |
+| GET | `/api/users/settings` | P1 |
+| PUT | `/api/users/settings` | P1 |
+| POST | `/api/mails` | P0 |
+| GET | `/api/mails/inbox` | P0/P1 |
+| GET | `/api/mails/sent` | P0/P1 |
+| GET | `/api/mails/trash` | P1 |
+| GET | `/api/mails/spam` | P1 |
+| GET | `/api/mails/{mailId}` | P0/P1 |
+| PATCH | `/api/mails/{mailId}/read` | P0 |
+| DELETE | `/api/mails/{mailId}` | P0 |
+| PATCH | `/api/mails/{mailId}/restore` | P2 |
+| GET | `/api/mails/statistics` | P1 |
+| POST | `/api/mails/{mailId}/analysis/retry` | P2 |
+| GET | `/api/health` | 已有接口 |
+
 ## Documents
 
-建议阅读顺序：
+推荐阅读顺序：
 
 1. `AGENTS.md`
 2. `docs/00-index.md`
-3. `docs/mvp.md`
-4. `docs/database.md`
-5. `docs/api.md`
-6. `docs/git-workflow.md`
-7. `README.md`
-
-文档职责：
-
-- `docs/mvp.md`：第一版 MVP 范围和验收标准
-- `docs/database.md`：数据库设计和字段语义
-- `sql/schema.sql`：MySQL 建表 SQL
-- `docs/api.md`：前后端接口契约
-- `docs/git-workflow.md`：分支、提交和合并规范
-- `docs/2026年实训要求.pdf`：课程实训原始要求
+3. `docs/api.md`
+4. `docs/mvp.md`
+5. `docs/prd.md`
+6. `docs/database.md`
+7. `docs/git-workflow.md`
+8. `README.md`
 
 ## Git Workflow
 
@@ -269,12 +287,6 @@ main
 dev
 feature/*
 ```
-
-分支含义：
-
-- `main`：稳定分支，用于阶段交付、演示和最终提交
-- `dev`：开发集成分支
-- `feature/*`：具体功能或文档任务分支
 
 推荐流程：
 
@@ -293,7 +305,7 @@ type(scope): message
 示例：
 
 ```text
-docs(readme): update project startup guide
+docs(api): update mail api contract
 feat(auth): implement login api
 feat(mail): implement send mail api
 fix(mail): fix mail detail permission check
@@ -303,30 +315,26 @@ fix(mail): fix mail detail permission check
 
 ## MVP Test Flow
 
-第一版业务接口完成后，建议使用 Apifox 按以下流程测试：
+P0 联调建议：
 
-1. 注册用户 `alice`
-2. 注册用户 `bob`
-3. 使用 `alice` 登录并保存 token
-4. 使用 `bob` 登录并保存 token
-5. 使用 `alice` token 向 `bob` 发送邮件
-6. 使用 `bob` token 查询收件箱
-7. 使用 `alice` token 查询已发送
-8. 使用 `bob` token 查询邮件详情
-9. 使用第三个用户 token 查询该邮件详情，应返回无权限
-10. 使用 `bob` token 标记邮件为已读
-11. 使用 `bob` token 删除该邮件
-12. 再次查询 `bob` 收件箱，确认邮件不再出现
-13. 查询 `alice` 已发送，确认邮件仍然存在
+1. 注册用户 `alice`。
+2. 注册用户 `bob`。
+3. `alice` 登录并保存 token。
+4. `alice` 给 `bob` 发送邮件。
+5. `alice` 查看已发送。
+6. `bob` 登录并保存 token。
+7. `bob` 查看收件箱。
+8. `bob` 查看邮件详情，详情接口自动标记已读。
+9. 第三个用户查看该邮件详情，应返回无权限。
+10. `bob` 调用标记已读接口。
+11. `bob` 删除邮件。
+12. `bob` 再查收件箱，确认邮件不再出现。
 
-## Future Extensions
+P1 联调建议：
 
-当前 MVP 稳定后，可按实训要求继续扩展：
+- 查看已删除列表。
+- 查看垃圾邮箱列表。
+- 查看侧边栏统计。
+- 测试搜索和过滤参数。
+- 测试用户设置读取和更新。
 
-- 附件上传和文件隔离存储
-- 邮件搜索和过滤
-- 新邮件通知
-- 客户端与服务器同步
-- AI 垃圾邮件识别、邮件摘要、优先级排序等插件能力
-
-扩展时应保持基础邮件流程独立可用，不要把 AI 或复杂扩展逻辑写死进基础发信流程。

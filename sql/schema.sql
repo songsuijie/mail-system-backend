@@ -1,4 +1,4 @@
--- Mail System Backend MVP schema.
+mail_system-- Mail System Backend MVP schema.
 -- Database: MySQL 8.x or compatible versions.
 
 CREATE DATABASE IF NOT EXISTS mail_system
