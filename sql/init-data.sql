@@ -13,7 +13,7 @@ INSERT INTO sys_user (
     status,
     deleted
 ) VALUES
-    ('admin', SHA2('123456', 256), '管理员', 'admin@mail.com', 1, 0),
+    ('admin', SHA2('123456', 256), 'Admin', 'admin@mail.com', 1, 0),
     ('alice', SHA2('123456', 256), 'Alice', 'alice@mail.com', 1, 0),
     ('bob', SHA2('123456', 256), 'Bob', 'bob@mail.com', 1, 0)
 ON DUPLICATE KEY UPDATE
@@ -51,4 +51,3 @@ ON DUPLICATE KEY UPDATE
     max_tokens = VALUES(max_tokens),
     temperature = VALUES(temperature),
     updated_at = CURRENT_TIMESTAMP;
-

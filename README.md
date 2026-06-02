@@ -23,8 +23,12 @@ GET /api/health
 
 响应：
 
-```text
-mail-system-backend is running
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": "mail-system-backend is running"
+}
 ```
 
 ## Tech Stack
