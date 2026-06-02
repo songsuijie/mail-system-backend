@@ -333,7 +333,8 @@ fix(mail): fix mail detail permission check
 | `feature/p0-mail-list` | P0 | 收件箱、已发送列表、基础分页、基础排序 | `GET /api/mails/inbox`、`GET /api/mails/sent` |
 | `feature/p0-mail-detail-status` | P0 | 邮件详情权限、详情自动已读、显式标记已读、收件人侧逻辑删除 | `GET /api/mails/{mailId}`、`PATCH /api/mails/{mailId}/read`、`DELETE /api/mails/{mailId}` |
 | `feature/p1-user-settings` | P1 | 用户设置、AI 配置状态读写和脱敏展示 | `GET /api/users/settings`、`PUT /api/users/settings` |
-| `feature/p1-mail-enhancement` | P1 | 已删除列表、垃圾邮箱、统计数量、列表搜索过滤、分析字段展示 | `GET /api/mails/trash`、`GET /api/mails/spam`、`GET /api/mails/statistics`、列表筛选参数 |
+| `feature/p1-ai-analysis` | P1 | 邮件发送后的默认/规则分析结果、`mail_analysis` 写入、列表和详情分析字段组装、AI 不可用时降级 | `POST /api/mails` 后置分析、`GET /api/mails/inbox`、`GET /api/mails/sent`、`GET /api/mails/trash`、`GET /api/mails/spam`、`GET /api/mails/{mailId}` 中的分析字段 |
+| `feature/p1-mail-enhancement` | P1 | 已删除列表、垃圾邮箱、统计数量、列表搜索过滤、普通邮件列表增强 | `GET /api/mails/trash`、`GET /api/mails/spam`、`GET /api/mails/statistics`、列表筛选参数 |
 | `feature/p2-optional` | P2 | 修改密码、恢复邮件、重新分析邮件 | `PUT /api/users/password`、`PATCH /api/mails/{mailId}/restore`、`POST /api/mails/{mailId}/analysis/retry` |
 
 推荐开发顺序：
@@ -345,11 +346,12 @@ feature/p0-mail-send
 feature/p0-mail-list
 feature/p0-mail-detail-status
 feature/p1-user-settings
+feature/p1-ai-analysis
 feature/p1-mail-enhancement
 feature/p2-optional
 ```
 
-P0 全部完成并通过 Apifox 闭环测试后，再开始 P1。P2 不阻塞第一版演示。
+P0 全部完成并通过 Apifox 闭环测试后，再开始 P1。AI 能力不单独新增 `/api/ai/*` 接口，配置归入 `feature/p1-user-settings`，分析结果生成和展示归入 `feature/p1-ai-analysis`。P2 不阻塞第一版演示。
 
 ## MVP Test Flow
 
