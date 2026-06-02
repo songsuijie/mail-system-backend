@@ -313,6 +313,36 @@ fix(mail): fix mail detail permission check
 
 详细规则见 `docs/git-workflow.md`。
 
+## Development Branch Plan
+
+所有功能分支都从 `dev` 创建，完成后先合并回 `dev`。`main` 只用于稳定版本、演示版本和最终交付。
+
+| 分支 | 优先级 | 主要范围 | 对应接口 |
+| --- | --- | --- | --- |
+| `feature/p0-foundation` | P0 | 统一响应、错误码、全局异常、分页对象、简单 token 基础工具、通用时间格式 | 全部接口基础能力 |
+| `feature/p0-auth-user` | P0 | 用户注册、登录、退出登录、当前用户信息 | `POST /api/auth/register`、`POST /api/auth/login`、`POST /api/auth/logout`、`GET /api/users/me` |
+| `feature/p0-mail-send` | P0 | 发送邮件、收件人校验、邮件主体和收件关系写入、默认分析状态 | `POST /api/mails` |
+| `feature/p0-mail-list` | P0 | 收件箱、已发送列表、基础分页、基础排序 | `GET /api/mails/inbox`、`GET /api/mails/sent` |
+| `feature/p0-mail-detail-status` | P0 | 邮件详情权限、详情自动已读、显式标记已读、收件人侧逻辑删除 | `GET /api/mails/{mailId}`、`PATCH /api/mails/{mailId}/read`、`DELETE /api/mails/{mailId}` |
+| `feature/p1-user-settings` | P1 | 用户搜索、用户设置、AI 配置状态读写和脱敏展示 | `GET /api/users/search`、`GET /api/users/settings`、`PUT /api/users/settings` |
+| `feature/p1-mail-enhancement` | P1 | 已删除列表、垃圾邮箱、统计数量、列表搜索过滤、分析字段展示 | `GET /api/mails/trash`、`GET /api/mails/spam`、`GET /api/mails/statistics`、列表筛选参数 |
+| `feature/p2-optional` | P2 | 修改密码、恢复邮件、重新分析邮件 | `PUT /api/users/password`、`PATCH /api/mails/{mailId}/restore`、`POST /api/mails/{mailId}/analysis/retry` |
+
+推荐开发顺序：
+
+```text
+feature/p0-foundation
+feature/p0-auth-user
+feature/p0-mail-send
+feature/p0-mail-list
+feature/p0-mail-detail-status
+feature/p1-user-settings
+feature/p1-mail-enhancement
+feature/p2-optional
+```
+
+P0 全部完成并通过 Apifox 闭环测试后，再开始 P1。P2 不阻塞第一版演示。
+
 ## MVP Test Flow
 
 P0 联调建议：

@@ -104,8 +104,8 @@ Authorization: Bearer eyJhbGciOi...
 |      |        |      |                         |
 |------|--------|------|-------------------------|
 | 参数 | 类型   | 必填 | 说明                    |
-| page | number | 否   | 页码，从 1 开始，默认 1 |
-| size | number | 否   | 每页数量，默认 10       |
+| page | integer | 否   | 页码，从 1 开始，默认 1 |
+| size | integer | 否   | 每页数量，默认 10       |
 
 ### 2.6 时间格式
 
@@ -380,7 +380,7 @@ GET /api/users/search?keyword=zhang
 |---------|--------|------|--------------------|
 | 参数    | 类型   | 必填 | 说明               |
 | keyword | string | 是   | 用户名或昵称关键词 |
-| limit   | number | 否   | 返回数量，默认 10  |
+| limit   | integer | 否   | 返回数量，默认 10  |
 
 #### 成功响应
 
@@ -530,8 +530,8 @@ Authorization: Bearer \<token\>
 | baseUrl             | string   | 当前模型接口地址。可返回，也可只返回掩码或不返回                                                     |
 | apiKeyConfigured    | boolean  | 是否已保存 API Key                                                                                   |
 | maskedApiKey        | string   | 脱敏后的 API Key，例如 sk-\*\*\*\*abcd                                                               |
-| timeoutMs           | number   | 单次 AI 请求超时时间，默认 10000，单位毫秒                                                           |
-| maxTokens           | number   | 模型最大输出长度，默认 800                                                                           |
+| timeoutMs           | integer  | 单次 AI 请求超时时间，默认 10000，单位毫秒                                                           |
+| maxTokens           | integer  | 模型最大输出长度，默认 800                                                                           |
 | temperature         | number   | 模型温度，默认 0.2                                                                                   |
 
 重要说明
@@ -637,8 +637,8 @@ Authorization: Bearer \<token\>
 | apiKey              | string   | 首次配置模型时必填 | 新的 API Key；不传表示不修改旧 Key |
 | baseUrl             | string   | 配置模型时必填     | OpenAI 兼容接口地址                |
 | modelName           | string   | 配置模型时必填     | 模型名称                           |
-| timeoutMs           | number   | 否                 | 超时时间，默认 10000               |
-| maxTokens           | number   | 否                 | 最大输出长度，默认 800             |
+| timeoutMs           | integer  | 否                 | 超时时间，默认 10000               |
+| maxTokens           | integer  | 否                 | 最大输出长度，默认 800             |
 | temperature         | number   | 否                 | 温度参数，默认 0.2                 |
 
 apiKey 更新规则
@@ -885,7 +885,7 @@ AI 分析可以同步执行，也可以异步执行。AI 失败不影响邮件�
 |                |             |                        |
 |----------------|-------------|------------------------|
 | 字段           | 类型        | 说明                   |
-| mailId         | number      | 邮件 ID                |
+| mailId         | integer     | 邮件 ID                |
 | subject        | string      | 邮件主题               |
 | snippet        | string      | 正文摘要或截断内容     |
 | sender         | object      | 发件人信息             |
@@ -920,8 +920,8 @@ Authorization: Bearer \<token\>
 |                |        |      |                                    |
 |----------------|--------|------|------------------------------------|
 | 参数           | 类型   | 必填 | 说明                               |
-| page           | number | 否   | 页码，默认 1                       |
-| size           | number | 否   | 每页数量，默认 10                  |
+| page           | integer | 否   | 页码，默认 1                       |
+| size           | integer | 否   | 每页数量，默认 10                  |
 | keyword        | string | 否   | 搜索主题、正文、发件人用户名或昵称 |
 | readStatus     | string | 否   | ALL / READ / UNREAD                |
 | senderUsername | string | 否   | 发件人用户名                       |
@@ -1032,8 +1032,8 @@ Authorization: Bearer \<token\>
 |                   |        |      |                                    |
 |-------------------|--------|------|------------------------------------|
 | 参数              | 类型   | 必填 | 说明                               |
-| page              | number | 否   | 页码，默认 1                       |
-| size              | number | 否   | 每页数量，默认 10                  |
+| page              | integer | 否   | 页码，默认 1                       |
+| size              | integer | 否   | 每页数量，默认 10                  |
 | keyword           | string | 否   | 搜索主题、正文、收件人用户名或昵称 |
 | recipientUsername | string | 否   | 收件人用户名                       |
 | startTime         | string | 否   | 开始时间                           |
@@ -1140,8 +1140,8 @@ Authorization: Bearer \<token\>
 |           |        |      |                                    |
 |-----------|--------|------|------------------------------------|
 | 参数      | 类型   | 必填 | 说明                               |
-| page      | number | 否   | 页码，默认 1                       |
-| size      | number | 否   | 每页数量，默认 10                  |
+| page      | integer | 否   | 页码，默认 1                       |
+| size      | integer | 否   | 每页数量，默认 10                  |
 | keyword   | string | 否   | 搜索主题、正文、发件人用户名或昵称 |
 | startTime | string | 否   | 开始时间                           |
 | endTime   | string | 否   | 结束时间                           |
@@ -1247,8 +1247,8 @@ Authorization: Bearer \<token\>
 |           |        |      |                                    |
 |-----------|--------|------|------------------------------------|
 | 参数      | 类型   | 必填 | 说明                               |
-| page      | number | 否   | 页码，默认 1                       |
-| size      | number | 否   | 每页数量，默认 10                  |
+| page      | integer | 否   | 页码，默认 1                       |
+| size      | integer | 否   | 每页数量，默认 10                  |
 | keyword   | string | 否   | 搜索主题、正文、发件人用户名或昵称 |
 | spamLevel | string | 否   | LOW / MEDIUM / HIGH                |
 | riskLevel | string | 否   | LOW / MEDIUM / HIGH                |
@@ -1358,7 +1358,7 @@ Authorization: Bearer \<token\>
 |        |        |         |
 |--------|--------|---------|
 | 参数   | 类型   | 说明    |
-| mailId | number | 邮件 ID |
+| mailId | integer | 邮件 ID |
 
 #### 成功响应
 
@@ -1779,11 +1779,11 @@ Authorization: Bearer \<token\>
 |             |        |                    |
 |-------------|--------|--------------------|
 | 字段        | 类型   | 说明               |
-| inboxTotal  | number | 收件箱正常邮件总数 |
-| inboxUnread | number | 收件箱未读数量     |
-| sentTotal   | number | 已发送邮件数量     |
-| trashTotal  | number | 已删除邮件数量     |
-| spamTotal   | number | 垃圾邮箱邮件数量   |
+| inboxTotal  | integer | 收件箱正常邮件总数 |
+| inboxUnread | integer | 收件箱未读数量     |
+| sentTotal   | integer | 已发送邮件数量     |
+| trashTotal  | integer | 已删除邮件数量     |
+| spamTotal   | integer | 垃圾邮箱邮件数量   |
 
 说明：
 
@@ -1926,9 +1926,9 @@ AI 能力只作为增强能力。基础垃圾邮件识别仍采用“规则检�
 |---------------|----------|--------------------------|
 | aiProvider    | string   | 本次分析使用的模型服务商 |
 | modelName     | string   | 本次分析使用的模型名称   |
-| priorityScore | number   | 优先级评分，0 至 100     |
-| spamScore     | number   | 垃圾邮件评分，0 至 100   |
-| riskScore     | number   | 安全风险评分，0 至 100   |
+| priorityScore | integer  | 优先级评分，0 至 100     |
+| spamScore     | integer  | 垃圾邮件评分，0 至 100   |
+| riskScore     | integer  | 安全风险评分，0 至 100   |
 
 第一版详情页至少返回 analysisStatus、summary、priorityReason、spamReason、riskReason、replySuggestions；如果前端详情页需要展示优先级、垃圾等级和风险等级，则以第 13.1 的完整 analysis 字段为准。
 
@@ -1946,7 +1946,7 @@ Authorization: Bearer \<token\>
 
 | **参数** | **类型** | **必填** | **说明** |
 |----------|----------|----------|----------|
-| mailId   | number   | 是       | 邮件 ID  |
+| mailId   | integer  | 是       | 邮件 ID  |
 
 成功响应
 
