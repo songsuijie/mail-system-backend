@@ -24,7 +24,7 @@
 
 ## 3. 表结构总览
 
-`docs/api.md` 第 19 节使用 `user` 和 `mail` 作为实体名称。为了避免和 MySQL 系统用户概念混淆，并延续当前项目命名，实际建表使用以下表名：
+`docs/api.md` 第 17 节使用 `user` 和 `mail` 作为实体名称。为了避免和 MySQL 系统用户概念混淆，并延续当前项目命名，实际建表使用以下表名：
 
 | API 实体 | 实际表名 | 说明 |
 | --- | --- | --- |
@@ -62,7 +62,7 @@ mail_recipient 1 ---- 0/1 mail_analysis
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
-| `id` | `BIGINT` | 用户 ID，对应 API 的 `userId` |
+| `id` | `BIGINT` | 用户 ID，作为内部关联字段，当前接口响应不直接返回 |
 | `username` | `VARCHAR(32)` | 用户名，全局唯一 |
 | `password_hash` | `VARCHAR(255)` | 密码哈希，不保存明文密码 |
 | `nickname` | `VARCHAR(64)` | 昵称，不传时默认等于 username |
@@ -76,7 +76,7 @@ mail_recipient 1 ---- 0/1 mail_analysis
 
 - 注册时校验 `username` 唯一。
 - 登录时只允许 `status = 1` 且 `deleted = 0` 的用户登录。
-- API 返回字段使用 `userId`、`username`、`nickname`、`emailAddress`。
+- API 返回字段使用 `username`、`nickname`、`emailAddress`、`avatarText`，当前最终版不返回 `userId`。
 
 ### 5.2 `user_settings`
 
@@ -123,7 +123,7 @@ mail_recipient 1 ---- 0/1 mail_analysis
 | `id` | `BIGINT` | 邮件 ID，对应 API 的 `mailId` |
 | `sender_id` | `BIGINT` | 发件人用户 ID |
 | `subject` | `VARCHAR(200)` | 邮件主题 |
-| `content` | `MEDIUMTEXT` | 邮件正文 |
+| `content` | `MEDIUMTEXT` | 邮件正文，保存 `RichTextNode[]` 富文本数组的 JSON 字符串 |
 | `sent_at` | `DATETIME` | 发送时间，对应 API 的 `sentAt` |
 | `status` | `TINYINT` | 邮件状态，当前 `1` 表示已发送 |
 | `sender_deleted` | `TINYINT` | 发件人侧删除预留字段 |
@@ -208,6 +208,7 @@ mail_recipient 1 ---- 0/1 mail_analysis
 - AI 失败不能影响邮件发送成功。
 - 列表页只返回展示和筛选所需的分析字段。
 - 详情页返回完整 `analysis` 对象。
+- `priority_score`、`spam_score`、`risk_score`、`ai_provider`、`model_name` 为内部计算、排序或排错字段，当前最终版接口层不返回。
 
 ## 6. 枚举约定
 
@@ -301,7 +302,6 @@ OR mail_recipient.recipient_id = current_user_id
 
 | API 字段 | 数据库来源 |
 | --- | --- |
-| `userId` | `sys_user.id` |
 | `username` | `sys_user.username` |
 | `nickname` | `sys_user.nickname` |
 | `emailAddress` | `sys_user.email_address` |
@@ -330,5 +330,11 @@ OR mail_recipient.recipient_id = current_user_id
 sql/schema.sql
 ```
 
-当前脚本用于开发环境重建表结构，会删除并重建核心表。执行前应确认本地数据可以被清空。
+初始测试数据维护在：
+
+```text
+sql/init-data.sql
+```
+
+当前建表脚本用于开发环境重建表结构，会删除并重建核心表。执行前应确认本地数据可以被清空。建表完成后可按需执行初始数据脚本导入测试账号和默认用户设置。
 

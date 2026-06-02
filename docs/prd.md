@@ -174,13 +174,12 @@ P1 查询参数：
 
 ```http
 POST /api/mails
-GET /api/users/search
 ```
 
 说明：
 
 - `POST /api/mails` 属于 P0。
-- `GET /api/users/search` 属于 P1，可用于收件人自动补全；未实现时前端直接输入用户名。
+- 当前最终版不提供 `/api/users/search`，前端直接输入收件人的 `recipientUsername`。
 
 表单字段：
 
@@ -385,7 +384,6 @@ page=1&size=10
 | 认证 | POST | `/api/auth/login` | P0 |
 | 认证 | POST | `/api/auth/logout` | P0，可选后端实现 |
 | 用户 | GET | `/api/users/me` | P0 |
-| 用户 | GET | `/api/users/search` | P1 |
 | 用户 | PUT | `/api/users/password` | P2 |
 | 设置 | GET | `/api/users/settings` | P1 |
 | 设置 | PUT | `/api/users/settings` | P1 |

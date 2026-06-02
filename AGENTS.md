@@ -124,13 +124,12 @@ P0 required features:
 
 P1 recommended features after P0 is stable:
 
-1. Search users
-2. User settings and AI configuration status
-3. Query deleted mails
-4. Query spam mailbox
-5. Mailbox statistics
-6. Search and filter mail lists
-7. Return analysis fields for list and detail pages
+1. User settings and AI configuration status
+2. Query deleted mails
+3. Query spam mailbox
+4. Mailbox statistics
+5. Search and filter mail lists
+6. Return analysis fields for list and detail pages
 
 P2 optional features:
 
@@ -503,7 +502,6 @@ POST   /api/auth/register
 POST   /api/auth/login
 POST   /api/auth/logout
 GET    /api/users/me
-GET    /api/users/search
 PUT    /api/users/password
 GET    /api/users/settings
 PUT    /api/users/settings
@@ -765,7 +763,7 @@ Current priority order:
 9. Implement P0: explicit read status update.
 10. Implement P0: recipient-side logical delete.
 11. Use Apifox to test all P0 APIs.
-12. Implement P1 features after P0 is stable: search users, user settings, deleted list, spam mailbox, statistics, filters, and analysis fields.
+12. Implement P1 features after P0 is stable: user settings, deleted list, spam mailbox, statistics, filters, and analysis fields.
 13. Implement P2 features only if time allows.
 
 Do not make AI model calls block or break the basic mail workflow.
