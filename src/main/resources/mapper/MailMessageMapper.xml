@@ -4,6 +4,24 @@
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.scut.mailsystem.mapper.MailMessageMapper">
 
+    <resultMap id="MailListItemRowResultMap" type="com.scut.mailsystem.mapper.row.MailListItemRow">
+        <id column="mail_id" property="mailId"/>
+        <result column="subject" property="subject"/>
+        <result column="content" property="content"/>
+        <result column="sender_username" property="senderUsername"/>
+        <result column="sender_nickname" property="senderNickname"/>
+        <result column="recipient_username" property="recipientUsername"/>
+        <result column="recipient_nickname" property="recipientNickname"/>
+        <result column="sent_at" property="sentAt"/>
+        <result column="read_flag" property="readFlag"/>
+        <result column="priority" property="priority"/>
+        <result column="spam_flag" property="spamFlag"/>
+        <result column="spam_level" property="spamLevel"/>
+        <result column="risk_level" property="riskLevel"/>
+        <result column="risk_reason" property="riskReason"/>
+        <result column="analysis_status" property="analysisStatus"/>
+    </resultMap>
+
     <insert id="insert" parameterType="com.scut.mailsystem.entity.MailMessage"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO mail_message (
@@ -26,4 +44,77 @@
             #{updatedAt}
         )
     </insert>
+
+    <select id="countInbox" resultType="long">
+        SELECT COUNT(1)
+        FROM mail_message m
+        INNER JOIN mail_recipient r ON r.mail_id = m.id
+        WHERE r.recipient_id = #{userId}
+          AND r.deleted_flag = 0
+          AND r.spam_flag = 0
+    </select>
+
+    <select id="selectInboxPage" resultMap="MailListItemRowResultMap">
+        SELECT
+            m.id AS mail_id,
+            m.subject,
+            m.content,
+            sender.username AS sender_username,
+            sender.nickname AS sender_nickname,
+            recipient.username AS recipient_username,
+            recipient.nickname AS recipient_nickname,
+            m.sent_at,
+            r.read_flag,
+            COALESCE(a.priority, 'MEDIUM') AS priority,
+            COALESCE(a.spam_flag, 0) AS spam_flag,
+            COALESCE(a.spam_level, 'NONE') AS spam_level,
+            COALESCE(a.risk_level, 'SAFE') AS risk_level,
+            a.risk_reason,
+            COALESCE(a.analysis_status, 'NOT_STARTED') AS analysis_status
+        FROM mail_message m
+        INNER JOIN mail_recipient r ON r.mail_id = m.id
+        INNER JOIN sys_user sender ON sender.id = m.sender_id
+        INNER JOIN sys_user recipient ON recipient.id = r.recipient_id
+        LEFT JOIN mail_analysis a ON a.mail_id = m.id AND a.recipient_id = r.recipient_id
+        WHERE r.recipient_id = #{userId}
+          AND r.deleted_flag = 0
+          AND r.spam_flag = 0
+        ORDER BY m.sent_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countSent" resultType="long">
+        SELECT COUNT(1)
+        FROM mail_message m
+        WHERE m.sender_id = #{userId}
+          AND m.sender_deleted = 0
+    </select>
+
+    <select id="selectSentPage" resultMap="MailListItemRowResultMap">
+        SELECT
+            m.id AS mail_id,
+            m.subject,
+            m.content,
+            sender.username AS sender_username,
+            sender.nickname AS sender_nickname,
+            recipient.username AS recipient_username,
+            recipient.nickname AS recipient_nickname,
+            m.sent_at,
+            NULL AS read_flag,
+            COALESCE(a.priority, 'MEDIUM') AS priority,
+            COALESCE(a.spam_flag, 0) AS spam_flag,
+            COALESCE(a.spam_level, 'NONE') AS spam_level,
+            COALESCE(a.risk_level, 'SAFE') AS risk_level,
+            a.risk_reason,
+            COALESCE(a.analysis_status, 'NOT_STARTED') AS analysis_status
+        FROM mail_message m
+        INNER JOIN mail_recipient r ON r.mail_id = m.id
+        INNER JOIN sys_user sender ON sender.id = m.sender_id
+        INNER JOIN sys_user recipient ON recipient.id = r.recipient_id
+        LEFT JOIN mail_analysis a ON a.mail_id = m.id AND a.recipient_id = r.recipient_id
+        WHERE m.sender_id = #{userId}
+          AND m.sender_deleted = 0
+        ORDER BY m.sent_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
 </mapper>
