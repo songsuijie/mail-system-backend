@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.scut.mailsystem.mapper.MailRecipientMapper">
+
+    <insert id="insert" parameterType="com.scut.mailsystem.entity.MailRecipient"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO mail_recipient (
+            mail_id,
+            recipient_id,
+            recipient_type,
+            read_flag,
+            read_at,
+            deleted_flag,
+            deleted_at,
+            spam_flag,
+            spam_level,
+            risk_level,
+            created_at,
+            updated_at
+        ) VALUES (
+            #{mailId},
+            #{recipientId},
+            #{recipientType},
+            #{readFlag},
+            #{readAt},
+            #{deletedFlag},
+            #{deletedAt},
+            #{spamFlag},
+            #{spamLevel},
+            #{riskLevel},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+</mapper>

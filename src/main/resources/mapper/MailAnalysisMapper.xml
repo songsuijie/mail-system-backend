@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.scut.mailsystem.mapper.MailAnalysisMapper">
+
+    <insert id="insert" parameterType="com.scut.mailsystem.entity.MailAnalysis"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO mail_analysis (
+            mail_id,
+            recipient_id,
+            analysis_status,
+            priority,
+            priority_score,
+            priority_reason,
+            spam_flag,
+            spam_score,
+            spam_level,
+            spam_reason,
+            risk_level,
+            risk_score,
+            risk_reason,
+            summary,
+            reply_suggestions,
+            ai_provider,
+            model_name,
+            ai_error_message,
+            created_at,
+            updated_at
+        ) VALUES (
+            #{mailId},
+            #{recipientId},
+            #{analysisStatus},
+            #{priority},
+            #{priorityScore},
+            #{priorityReason},
+            #{spamFlag},
+            #{spamScore},
+            #{spamLevel},
+            #{spamReason},
+            #{riskLevel},
+            #{riskScore},
+            #{riskReason},
+            #{summary},
+            #{replySuggestions},
+            #{aiProvider},
+            #{modelName},
+            #{aiErrorMessage},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+</mapper>

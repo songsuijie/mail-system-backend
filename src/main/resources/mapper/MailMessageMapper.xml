@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.scut.mailsystem.mapper.MailMessageMapper">
+
+    <insert id="insert" parameterType="com.scut.mailsystem.entity.MailMessage"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO mail_message (
+            sender_id,
+            subject,
+            content,
+            sent_at,
+            status,
+            sender_deleted,
+            created_at,
+            updated_at
+        ) VALUES (
+            #{senderId},
+            #{subject},
+            #{content},
+            #{sentAt},
+            #{status},
+            #{senderDeleted},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+</mapper>
