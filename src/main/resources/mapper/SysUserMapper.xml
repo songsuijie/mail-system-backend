@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.scut.mailsystem.mapper.SysUserMapper">
+
+    <resultMap id="SysUserResultMap" type="com.scut.mailsystem.entity.SysUser">
+        <id column="id" property="id"/>
+        <result column="username" property="username"/>
+        <result column="password_hash" property="passwordHash"/>
+        <result column="nickname" property="nickname"/>
+        <result column="email_address" property="emailAddress"/>
+        <result column="status" property="status"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <sql id="BaseColumnList">
+        id,
+        username,
+        password_hash,
+        nickname,
+        email_address,
+        status,
+        created_at,
+        updated_at,
+        deleted
+    </sql>
+
+    <select id="selectByUsername" resultMap="SysUserResultMap">
+        SELECT
+        <include refid="BaseColumnList"/>
+        FROM sys_user
+        WHERE username = #{username}
+        LIMIT 1
+    </select>
+
+    <select id="selectActiveByUsername" resultMap="SysUserResultMap">
+        SELECT
+        <include refid="BaseColumnList"/>
+        FROM sys_user
+        WHERE username = #{username}
+          AND status = 1
+          AND deleted = 0
+        LIMIT 1
+    </select>
+
+    <select id="selectActiveById" resultMap="SysUserResultMap">
+        SELECT
+        <include refid="BaseColumnList"/>
+        FROM sys_user
+        WHERE id = #{id}
+          AND status = 1
+          AND deleted = 0
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.scut.mailsystem.entity.SysUser"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_user (
+            username,
+            password_hash,
+            nickname,
+            email_address,
+            status,
+            created_at,
+            updated_at,
+            deleted
+        ) VALUES (
+            #{username},
+            #{passwordHash},
+            #{nickname},
+            #{emailAddress},
+            #{status},
+            #{createdAt},
+            #{updatedAt},
+            #{deleted}
+        )
+    </insert>
+</mapper>
