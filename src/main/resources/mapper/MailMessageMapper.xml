@@ -22,6 +22,34 @@
         <result column="analysis_status" property="analysisStatus"/>
     </resultMap>
 
+    <resultMap id="MailDetailRowResultMap" type="com.scut.mailsystem.mapper.row.MailDetailRow">
+        <id column="mail_id" property="mailId"/>
+        <result column="subject" property="subject"/>
+        <result column="content" property="content"/>
+        <result column="sender_id" property="senderId"/>
+        <result column="sender_username" property="senderUsername"/>
+        <result column="sender_nickname" property="senderNickname"/>
+        <result column="recipient_id" property="recipientId"/>
+        <result column="recipient_username" property="recipientUsername"/>
+        <result column="recipient_nickname" property="recipientNickname"/>
+        <result column="sent_at" property="sentAt"/>
+        <result column="sender_deleted" property="senderDeleted"/>
+        <result column="read_flag" property="readFlag"/>
+        <result column="read_at" property="readAt"/>
+        <result column="deleted_flag" property="deletedFlag"/>
+        <result column="deleted_at" property="deletedAt"/>
+        <result column="spam_flag" property="spamFlag"/>
+        <result column="analysis_status" property="analysisStatus"/>
+        <result column="summary" property="summary"/>
+        <result column="spam_level" property="spamLevel"/>
+        <result column="spam_reason" property="spamReason"/>
+        <result column="risk_level" property="riskLevel"/>
+        <result column="risk_reason" property="riskReason"/>
+        <result column="priority" property="priority"/>
+        <result column="priority_reason" property="priorityReason"/>
+        <result column="reply_suggestions" property="replySuggestions"/>
+    </resultMap>
+
     <insert id="insert" parameterType="com.scut.mailsystem.entity.MailMessage"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO mail_message (
@@ -116,5 +144,41 @@
           AND m.sender_deleted = 0
         ORDER BY m.sent_at DESC
         LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="selectDetailByMailId" resultMap="MailDetailRowResultMap">
+        SELECT
+            m.id AS mail_id,
+            m.subject,
+            m.content,
+            m.sender_id,
+            sender.username AS sender_username,
+            sender.nickname AS sender_nickname,
+            r.recipient_id,
+            recipient.username AS recipient_username,
+            recipient.nickname AS recipient_nickname,
+            m.sent_at,
+            m.sender_deleted,
+            r.read_flag,
+            r.read_at,
+            r.deleted_flag,
+            r.deleted_at,
+            COALESCE(a.spam_flag, r.spam_flag, 0) AS spam_flag,
+            COALESCE(a.analysis_status, 'NOT_STARTED') AS analysis_status,
+            a.summary,
+            COALESCE(a.spam_level, r.spam_level, 'NONE') AS spam_level,
+            a.spam_reason,
+            COALESCE(a.risk_level, r.risk_level, 'SAFE') AS risk_level,
+            a.risk_reason,
+            COALESCE(a.priority, 'MEDIUM') AS priority,
+            a.priority_reason,
+            a.reply_suggestions
+        FROM mail_message m
+        INNER JOIN mail_recipient r ON r.mail_id = m.id
+        INNER JOIN sys_user sender ON sender.id = m.sender_id
+        INNER JOIN sys_user recipient ON recipient.id = r.recipient_id
+        LEFT JOIN mail_analysis a ON a.mail_id = m.id AND a.recipient_id = r.recipient_id
+        WHERE m.id = #{mailId}
+        LIMIT 1
     </select>
 </mapper>

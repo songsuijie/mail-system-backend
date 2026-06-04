@@ -2,12 +2,21 @@ package com.scut.mailsystem.controller.mail;
 
 import com.scut.mailsystem.common.ApiResponse;
 import com.scut.mailsystem.common.PageResult;
+import com.scut.mailsystem.common.enums.ErrorCode;
+import com.scut.mailsystem.dto.mail.MarkMailReadRequest;
 import com.scut.mailsystem.dto.mail.SendMailRequest;
+import com.scut.mailsystem.exception.BusinessException;
 import com.scut.mailsystem.service.mail.MailService;
+import com.scut.mailsystem.vo.mail.MailDeleteResponse;
+import com.scut.mailsystem.vo.mail.MailDetailVO;
 import com.scut.mailsystem.vo.mail.MailListItemVO;
+import com.scut.mailsystem.vo.mail.MailReadResponse;
 import com.scut.mailsystem.vo.mail.SendMailResponse;
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -46,5 +55,30 @@ public class MailController {
             @RequestParam(value = "page", required = false) Integer page,
             @RequestParam(value = "size", required = false) Integer size) {
         return ApiResponse.success(mailService.getSent(authorizationHeader, page, size));
+    }
+
+    @GetMapping("/{mailId}")
+    public ApiResponse<MailDetailVO> getMailDetail(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @PathVariable("mailId") Long mailId) {
+        return ApiResponse.success(mailService.getMailDetail(authorizationHeader, mailId));
+    }
+
+    @PatchMapping("/{mailId}/read")
+    public ApiResponse<MailReadResponse> markRead(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @PathVariable("mailId") Long mailId,
+            @RequestBody(required = false) MarkMailReadRequest request) {
+        if (request == null || !Boolean.TRUE.equals(request.getRead())) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR);
+        }
+        return ApiResponse.success(mailService.markRead(authorizationHeader, mailId));
+    }
+
+    @DeleteMapping("/{mailId}")
+    public ApiResponse<MailDeleteResponse> deleteMail(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @PathVariable("mailId") Long mailId) {
+        return ApiResponse.success(mailService.deleteMail(authorizationHeader, mailId));
     }
 }

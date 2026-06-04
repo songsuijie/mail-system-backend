@@ -1,6 +1,7 @@
 package com.scut.mailsystem.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scut.mailsystem.common.LoginUser;
@@ -12,6 +13,7 @@ import com.scut.mailsystem.entity.MailMessage;
 import com.scut.mailsystem.entity.MailRecipient;
 import com.scut.mailsystem.entity.SysUser;
 import com.scut.mailsystem.exception.BusinessException;
+import com.scut.mailsystem.mapper.row.MailDetailRow;
 import com.scut.mailsystem.mapper.row.MailListItemRow;
 import com.scut.mailsystem.mapper.MailAnalysisMapper;
 import com.scut.mailsystem.mapper.MailMessageMapper;
@@ -20,7 +22,11 @@ import com.scut.mailsystem.mapper.SysUserMapper;
 import com.scut.mailsystem.service.mail.MailService;
 import com.scut.mailsystem.utils.AuthHeaderUtils;
 import com.scut.mailsystem.utils.TokenUtils;
+import com.scut.mailsystem.vo.mail.MailAnalysisVO;
+import com.scut.mailsystem.vo.mail.MailDeleteResponse;
+import com.scut.mailsystem.vo.mail.MailDetailVO;
 import com.scut.mailsystem.vo.mail.MailListItemVO;
+import com.scut.mailsystem.vo.mail.MailReadResponse;
 import com.scut.mailsystem.vo.mail.MailUserVO;
 import com.scut.mailsystem.vo.mail.SendMailResponse;
 import org.springframework.stereotype.Service;
@@ -29,6 +35,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -57,6 +64,8 @@ public class MailServiceImpl implements MailService {
     private static final String RISK_LEVEL_LOW = "LOW";
     private static final String RISK_LEVEL_MEDIUM = "MEDIUM";
     private static final String RISK_LEVEL_HIGH = "HIGH";
+    private static final String USER_ROLE_SENDER = "SENDER";
+    private static final String USER_ROLE_RECIPIENT = "RECIPIENT";
 
     private final SysUserMapper sysUserMapper;
     private final MailMessageMapper mailMessageMapper;
@@ -146,6 +155,64 @@ public class MailServiceImpl implements MailService {
         return PageResult.of(pageQuery.page(), pageQuery.size(), total, records);
     }
 
+    @Override
+    @Transactional
+    public MailDetailVO getMailDetail(String authorizationHeader, Long mailId) {
+        SysUser currentUser = getCurrentActiveUser(authorizationHeader);
+        MailDetailRow row = getExistingMailDetail(mailId);
+        boolean recipient = isCurrentRecipient(currentUser, row);
+        boolean sender = isCurrentSender(currentUser, row);
+        if (!sender && !recipient) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "无权限查看该邮件");
+        }
+
+        if (recipient && !isYes(row.getReadFlag())) {
+            LocalDateTime now = LocalDateTime.now();
+            mailRecipientMapper.markReadIfUnread(row.getMailId(), currentUser.getId(), now);
+            row.setReadFlag(FLAG_YES);
+            row.setReadAt(now);
+        }
+
+        return toMailDetailVO(row, sender, recipient);
+    }
+
+    @Override
+    @Transactional
+    public MailReadResponse markRead(String authorizationHeader, Long mailId) {
+        SysUser currentUser = getCurrentActiveUser(authorizationHeader);
+        MailDetailRow row = getExistingMailDetail(mailId);
+        if (!isCurrentRecipient(currentUser, row)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "无权限修改该邮件状态");
+        }
+
+        if (!isYes(row.getReadFlag())) {
+            mailRecipientMapper.markReadIfUnread(row.getMailId(), currentUser.getId(), LocalDateTime.now());
+        }
+        return new MailReadResponse(row.getMailId(), true);
+    }
+
+    @Override
+    @Transactional
+    public MailDeleteResponse deleteMail(String authorizationHeader, Long mailId) {
+        SysUser currentUser = getCurrentActiveUser(authorizationHeader);
+        MailDetailRow row = getExistingMailDetail(mailId);
+        boolean recipient = isCurrentRecipient(currentUser, row);
+        boolean sender = isCurrentSender(currentUser, row);
+        if (!sender && !recipient) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "无权限删除该邮件");
+        }
+        if (!recipient) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "当前版本暂不支持发件人侧删除");
+        }
+
+        LocalDateTime deletedAt = row.getDeletedAt();
+        if (!isYes(row.getDeletedFlag())) {
+            deletedAt = LocalDateTime.now();
+            mailRecipientMapper.deleteRecipientMailIfNotDeleted(row.getMailId(), currentUser.getId(), deletedAt);
+        }
+        return new MailDeleteResponse(row.getMailId(), true, deletedAt);
+    }
+
     private SysUser getCurrentActiveUser(String authorizationHeader) {
         String token = AuthHeaderUtils.extractToken(authorizationHeader);
         LoginUser loginUser = TokenUtils.parseToken(token);
@@ -154,6 +221,25 @@ public class MailServiceImpl implements MailService {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
         return sender;
+    }
+
+    private MailDetailRow getExistingMailDetail(Long mailId) {
+        if (mailId == null || mailId <= 0) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR);
+        }
+        MailDetailRow row = mailMessageMapper.selectDetailByMailId(mailId);
+        if (row == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND);
+        }
+        return row;
+    }
+
+    private boolean isCurrentSender(SysUser currentUser, MailDetailRow row) {
+        return currentUser.getId() != null && currentUser.getId().equals(row.getSenderId());
+    }
+
+    private boolean isCurrentRecipient(SysUser currentUser, MailDetailRow row) {
+        return currentUser.getId() != null && currentUser.getId().equals(row.getRecipientId());
     }
 
     private SysUser getActiveRecipient(SendMailRequest request) {
@@ -292,6 +378,72 @@ public class MailServiceImpl implements MailService {
         return item;
     }
 
+    private MailDetailVO toMailDetailVO(MailDetailRow row, boolean sender, boolean recipient) {
+        String priority = defaultIfBlank(row.getPriority(), PRIORITY_MEDIUM);
+        String riskLevel = defaultIfBlank(row.getRiskLevel(), RISK_LEVEL_SAFE);
+        String spamLevel = defaultIfBlank(row.getSpamLevel(), SPAM_LEVEL_NONE);
+        String analysisStatus = defaultIfBlank(row.getAnalysisStatus(), ANALYSIS_STATUS_NOT_STARTED);
+
+        MailDetailVO detail = new MailDetailVO();
+        detail.setMailId(row.getMailId());
+        detail.setSubject(row.getSubject());
+        detail.setContent(parseRichTextContent(row.getContent()));
+        detail.setSender(new MailUserVO(row.getSenderUsername(), row.getSenderNickname()));
+        detail.setRecipient(new MailUserVO(row.getRecipientUsername(), row.getRecipientNickname()));
+        detail.setSentAt(row.getSentAt());
+        detail.setCurrentUserRole(recipient ? USER_ROLE_RECIPIENT : USER_ROLE_SENDER);
+        detail.setRead(recipient && isYes(row.getReadFlag()));
+        detail.setDeleted(recipient ? isYes(row.getDeletedFlag()) : isYes(row.getSenderDeleted()));
+        detail.setSpam(isYes(row.getSpamFlag()));
+        detail.setAnalysis(toMailAnalysisVO(row, analysisStatus, spamLevel, riskLevel, priority));
+        return detail;
+    }
+
+    private MailAnalysisVO toMailAnalysisVO(MailDetailRow row,
+                                            String analysisStatus,
+                                            String spamLevel,
+                                            String riskLevel,
+                                            String priority) {
+        MailAnalysisVO analysis = new MailAnalysisVO();
+        analysis.setAnalysisStatus(analysisStatus);
+        analysis.setSummary(defaultIfBlank(row.getSummary(), ""));
+        analysis.setSpamLevel(spamLevel);
+        analysis.setSpamLevelLabel(toSpamLevelLabel(spamLevel));
+        analysis.setSpamReason(defaultIfBlank(row.getSpamReason(), ""));
+        analysis.setRiskLevel(riskLevel);
+        analysis.setRiskLabel(toRiskLabel(riskLevel));
+        analysis.setPriority(priority);
+        analysis.setPriorityLabel(toPriorityLabel(priority));
+        analysis.setPriorityReason(defaultIfBlank(row.getPriorityReason(), ""));
+        analysis.setRiskReason(row.getRiskReason());
+        analysis.setReplySuggestions(parseReplySuggestions(row.getReplySuggestions()));
+        return analysis;
+    }
+
+    private List<Object> parseRichTextContent(String content) {
+        if (!StringUtils.hasText(content)) {
+            return Collections.emptyList();
+        }
+        try {
+            return objectMapper.readValue(content, new TypeReference<List<Object>>() {
+            });
+        } catch (JsonProcessingException exception) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR);
+        }
+    }
+
+    private List<String> parseReplySuggestions(String replySuggestions) {
+        if (!StringUtils.hasText(replySuggestions)) {
+            return Collections.emptyList();
+        }
+        try {
+            return objectMapper.readValue(replySuggestions, new TypeReference<List<String>>() {
+            });
+        } catch (JsonProcessingException exception) {
+            return Collections.emptyList();
+        }
+    }
+
     private String buildSnippet(String content) {
         if (!StringUtils.hasText(content)) {
             return "";
@@ -363,6 +515,23 @@ public class MailServiceImpl implements MailService {
             return "高风险";
         }
         return "安全";
+    }
+
+    private String toSpamLevelLabel(String spamLevel) {
+        if (RISK_LEVEL_LOW.equals(spamLevel)) {
+            return "低垃圾风险";
+        }
+        if (RISK_LEVEL_MEDIUM.equals(spamLevel)) {
+            return "中垃圾风险";
+        }
+        if (RISK_LEVEL_HIGH.equals(spamLevel)) {
+            return "高垃圾风险";
+        }
+        return "非垃圾邮件";
+    }
+
+    private boolean isYes(Integer flag) {
+        return flag != null && flag == FLAG_YES;
     }
 
     private String defaultIfBlank(String value, String defaultValue) {

@@ -3,6 +3,9 @@ package com.scut.mailsystem.service.mail;
 import com.scut.mailsystem.common.PageResult;
 import com.scut.mailsystem.dto.mail.SendMailRequest;
 import com.scut.mailsystem.vo.mail.MailListItemVO;
+import com.scut.mailsystem.vo.mail.MailDeleteResponse;
+import com.scut.mailsystem.vo.mail.MailDetailVO;
+import com.scut.mailsystem.vo.mail.MailReadResponse;
 import com.scut.mailsystem.vo.mail.SendMailResponse;
 
 public interface MailService {
@@ -12,4 +15,10 @@ public interface MailService {
     PageResult<MailListItemVO> getInbox(String authorizationHeader, Integer page, Integer size);
 
     PageResult<MailListItemVO> getSent(String authorizationHeader, Integer page, Integer size);
+
+    MailDetailVO getMailDetail(String authorizationHeader, Long mailId);
+
+    MailReadResponse markRead(String authorizationHeader, Long mailId);
+
+    MailDeleteResponse deleteMail(String authorizationHeader, Long mailId);
 }
