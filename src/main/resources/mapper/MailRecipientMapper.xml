@@ -34,4 +34,24 @@
             #{updatedAt}
         )
     </insert>
+
+    <update id="markReadIfUnread">
+        UPDATE mail_recipient
+        SET read_flag = 1,
+            read_at = #{readAt},
+            updated_at = #{readAt}
+        WHERE mail_id = #{mailId}
+          AND recipient_id = #{recipientId}
+          AND read_flag = 0
+    </update>
+
+    <update id="deleteRecipientMailIfNotDeleted">
+        UPDATE mail_recipient
+        SET deleted_flag = 1,
+            deleted_at = #{deletedAt},
+            updated_at = #{deletedAt}
+        WHERE mail_id = #{mailId}
+          AND recipient_id = #{recipientId}
+          AND deleted_flag = 0
+    </update>
 </mapper>
