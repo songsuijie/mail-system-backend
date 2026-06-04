@@ -13,6 +13,8 @@ public class SendMailRequest {
 
     private List<Object> content;
 
+    private String attachmentFileId;
+
     public String getRecipientUsername() {
         return recipientUsername;
     }
@@ -35,5 +37,13 @@ public class SendMailRequest {
 
     public void setContent(List<Object> content) {
         this.content = content;
+    }
+
+    public String getAttachmentFileId() {
+        return attachmentFileId;
+    }
+
+    public void setAttachmentFileId(String attachmentFileId) {
+        this.attachmentFileId = attachmentFileId;
     }
 }

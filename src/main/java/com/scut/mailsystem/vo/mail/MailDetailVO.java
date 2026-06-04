@@ -16,6 +16,7 @@ public class MailDetailVO {
     private Boolean deleted;
     private Boolean spam;
     private MailAnalysisVO analysis;
+    private MailAttachmentVO attachment;
 
     public Long getMailId() {
         return mailId;
@@ -103,5 +104,13 @@ public class MailDetailVO {
 
     public void setAnalysis(MailAnalysisVO analysis) {
         this.analysis = analysis;
+    }
+
+    public MailAttachmentVO getAttachment() {
+        return attachment;
+    }
+
+    public void setAttachment(MailAttachmentVO attachment) {
+        this.attachment = attachment;
     }
 }

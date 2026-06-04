@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.scut.mailsystem.mapper.FileResourceMapper">
+
+    <resultMap id="FileResourceResultMap" type="com.scut.mailsystem.entity.FileResource">
+        <id column="id" property="id"/>
+        <result column="file_id" property="fileId"/>
+        <result column="uploader_id" property="uploaderId"/>
+        <result column="mail_id" property="mailId"/>
+        <result column="original_filename" property="originalFilename"/>
+        <result column="stored_filename" property="storedFilename"/>
+        <result column="storage_path" property="storagePath"/>
+        <result column="content_type" property="contentType"/>
+        <result column="file_ext" property="fileExt"/>
+        <result column="file_size" property="fileSize"/>
+        <result column="status" property="status"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.scut.mailsystem.entity.FileResource"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO file_resource (
+            file_id,
+            uploader_id,
+            mail_id,
+            original_filename,
+            stored_filename,
+            storage_path,
+            content_type,
+            file_ext,
+            file_size,
+            status,
+            created_at,
+            updated_at
+        ) VALUES (
+            #{fileId},
+            #{uploaderId},
+            #{mailId},
+            #{originalFilename},
+            #{storedFilename},
+            #{storagePath},
+            #{contentType},
+            #{fileExt},
+            #{fileSize},
+            #{status},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+
+    <select id="selectByFileId" resultMap="FileResourceResultMap">
+        SELECT
+            id,
+            file_id,
+            uploader_id,
+            mail_id,
+            original_filename,
+            stored_filename,
+            storage_path,
+            content_type,
+            file_ext,
+            file_size,
+            status,
+            created_at,
+            updated_at
+        FROM file_resource
+        WHERE file_id = #{fileId}
+        LIMIT 1
+    </select>
+
+    <update id="bindToMail">
+        UPDATE file_resource
+        SET mail_id = #{mailId},
+            status = #{status},
+            updated_at = NOW()
+        WHERE file_id = #{fileId}
+          AND mail_id IS NULL
+          AND status = 'UPLOADED'
+    </update>
+</mapper>

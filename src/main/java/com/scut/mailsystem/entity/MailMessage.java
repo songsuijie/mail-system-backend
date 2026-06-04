@@ -8,6 +8,7 @@ public class MailMessage {
     private Long senderId;
     private String subject;
     private String content;
+    private String attachmentFileId;
     private LocalDateTime sentAt;
     private Integer status;
     private Integer senderDeleted;
@@ -44,6 +45,14 @@ public class MailMessage {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public String getAttachmentFileId() {
+        return attachmentFileId;
+    }
+
+    public void setAttachmentFileId(String attachmentFileId) {
+        this.attachmentFileId = attachmentFileId;
     }
 
     public LocalDateTime getSentAt() {

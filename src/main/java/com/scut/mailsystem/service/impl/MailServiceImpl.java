@@ -8,11 +8,13 @@ import com.scut.mailsystem.common.LoginUser;
 import com.scut.mailsystem.common.PageResult;
 import com.scut.mailsystem.common.enums.ErrorCode;
 import com.scut.mailsystem.dto.mail.SendMailRequest;
+import com.scut.mailsystem.entity.FileResource;
 import com.scut.mailsystem.entity.MailAnalysis;
 import com.scut.mailsystem.entity.MailMessage;
 import com.scut.mailsystem.entity.MailRecipient;
 import com.scut.mailsystem.entity.SysUser;
 import com.scut.mailsystem.exception.BusinessException;
+import com.scut.mailsystem.mapper.FileResourceMapper;
 import com.scut.mailsystem.mapper.row.MailDetailRow;
 import com.scut.mailsystem.mapper.row.MailListItemRow;
 import com.scut.mailsystem.mapper.MailAnalysisMapper;
@@ -23,6 +25,7 @@ import com.scut.mailsystem.service.mail.MailService;
 import com.scut.mailsystem.utils.AuthHeaderUtils;
 import com.scut.mailsystem.utils.TokenUtils;
 import com.scut.mailsystem.vo.mail.MailAnalysisVO;
+import com.scut.mailsystem.vo.mail.MailAttachmentVO;
 import com.scut.mailsystem.vo.mail.MailDeleteResponse;
 import com.scut.mailsystem.vo.mail.MailDetailVO;
 import com.scut.mailsystem.vo.mail.MailListItemVO;
@@ -66,22 +69,27 @@ public class MailServiceImpl implements MailService {
     private static final String RISK_LEVEL_HIGH = "HIGH";
     private static final String USER_ROLE_SENDER = "SENDER";
     private static final String USER_ROLE_RECIPIENT = "RECIPIENT";
+    private static final String FILE_STATUS_UPLOADED = "UPLOADED";
+    private static final String FILE_STATUS_BOUND = "BOUND";
 
     private final SysUserMapper sysUserMapper;
     private final MailMessageMapper mailMessageMapper;
     private final MailRecipientMapper mailRecipientMapper;
     private final MailAnalysisMapper mailAnalysisMapper;
+    private final FileResourceMapper fileResourceMapper;
     private final ObjectMapper objectMapper;
 
     public MailServiceImpl(SysUserMapper sysUserMapper,
                            MailMessageMapper mailMessageMapper,
                            MailRecipientMapper mailRecipientMapper,
                            MailAnalysisMapper mailAnalysisMapper,
+                           FileResourceMapper fileResourceMapper,
                            ObjectMapper objectMapper) {
         this.sysUserMapper = sysUserMapper;
         this.mailMessageMapper = mailMessageMapper;
         this.mailRecipientMapper = mailRecipientMapper;
         this.mailAnalysisMapper = mailAnalysisMapper;
+        this.fileResourceMapper = fileResourceMapper;
         this.objectMapper = objectMapper;
     }
 
@@ -96,10 +104,18 @@ public class MailServiceImpl implements MailService {
         SysUser recipient = getActiveRecipient(request);
         String subject = getSubject(request);
         String content = getContentJson(request);
+        FileResource attachment = getUsableAttachment(request.getAttachmentFileId(), sender.getId());
 
         LocalDateTime now = LocalDateTime.now();
-        MailMessage mailMessage = buildMailMessage(sender.getId(), subject, content, now);
+        MailMessage mailMessage = buildMailMessage(
+                sender.getId(),
+                subject,
+                content,
+                attachment == null ? null : attachment.getFileId(),
+                now
+        );
         mailMessageMapper.insert(mailMessage);
+        bindAttachmentIfNecessary(attachment, mailMessage.getId());
 
         MailRecipient mailRecipient = buildMailRecipient(mailMessage.getId(), recipient.getId(), now);
         mailRecipientMapper.insert(mailRecipient);
@@ -242,6 +258,35 @@ public class MailServiceImpl implements MailService {
         return currentUser.getId() != null && currentUser.getId().equals(row.getRecipientId());
     }
 
+    private FileResource getUsableAttachment(String attachmentFileId, Long senderId) {
+        String trimmedAttachmentFileId = trim(attachmentFileId);
+        if (!StringUtils.hasText(trimmedAttachmentFileId)) {
+            return null;
+        }
+
+        FileResource fileResource = fileResourceMapper.selectByFileId(trimmedAttachmentFileId);
+        if (fileResource == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "文件不存在");
+        }
+        if (!senderId.equals(fileResource.getUploaderId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "无权限使用该文件");
+        }
+        if (fileResource.getMailId() != null || !FILE_STATUS_UPLOADED.equals(fileResource.getStatus())) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "文件已被使用");
+        }
+        return fileResource;
+    }
+
+    private void bindAttachmentIfNecessary(FileResource attachment, Long mailId) {
+        if (attachment == null) {
+            return;
+        }
+        int updated = fileResourceMapper.bindToMail(attachment.getFileId(), mailId, FILE_STATUS_BOUND);
+        if (updated != 1) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "文件已被使用");
+        }
+    }
+
     private SysUser getActiveRecipient(SendMailRequest request) {
         String recipientUsername = trim(request.getRecipientUsername());
         if (!StringUtils.hasText(recipientUsername)) {
@@ -275,11 +320,16 @@ public class MailServiceImpl implements MailService {
         }
     }
 
-    private MailMessage buildMailMessage(Long senderId, String subject, String content, LocalDateTime now) {
+    private MailMessage buildMailMessage(Long senderId,
+                                         String subject,
+                                         String content,
+                                         String attachmentFileId,
+                                         LocalDateTime now) {
         MailMessage mailMessage = new MailMessage();
         mailMessage.setSenderId(senderId);
         mailMessage.setSubject(subject);
         mailMessage.setContent(content);
+        mailMessage.setAttachmentFileId(attachmentFileId);
         mailMessage.setSentAt(now);
         mailMessage.setStatus(MAIL_STATUS_SENT);
         mailMessage.setSenderDeleted(FLAG_NO);
@@ -396,7 +446,22 @@ public class MailServiceImpl implements MailService {
         detail.setDeleted(recipient ? isYes(row.getDeletedFlag()) : isYes(row.getSenderDeleted()));
         detail.setSpam(isYes(row.getSpamFlag()));
         detail.setAnalysis(toMailAnalysisVO(row, analysisStatus, spamLevel, riskLevel, priority));
+        detail.setAttachment(toMailAttachmentVO(row));
         return detail;
+    }
+
+    private MailAttachmentVO toMailAttachmentVO(MailDetailRow row) {
+        if (!StringUtils.hasText(row.getAttachmentFileId())) {
+            return null;
+        }
+
+        MailAttachmentVO attachment = new MailAttachmentVO();
+        attachment.setFileId(row.getAttachmentFileId());
+        attachment.setOriginalFilename(row.getAttachmentOriginalFilename());
+        attachment.setContentType(row.getAttachmentContentType());
+        attachment.setFileSize(row.getAttachmentFileSize());
+        attachment.setDownloadUrl("/api/files/" + row.getAttachmentFileId() + "/download");
+        return attachment;
     }
 
     private MailAnalysisVO toMailAnalysisVO(MailDetailRow row,
