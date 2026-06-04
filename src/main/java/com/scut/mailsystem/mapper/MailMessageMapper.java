@@ -26,4 +26,6 @@ public interface MailMessageMapper {
                                          @Param("size") Integer size);
 
     MailDetailRow selectDetailByMailId(@Param("mailId") Long mailId);
+
+    long countRelatedMailUser(@Param("mailId") Long mailId, @Param("userId") Long userId);
 }

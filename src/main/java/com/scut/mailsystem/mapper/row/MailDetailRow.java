@@ -29,6 +29,10 @@ public class MailDetailRow {
     private String priority;
     private String priorityReason;
     private String replySuggestions;
+    private String attachmentFileId;
+    private String attachmentOriginalFilename;
+    private String attachmentContentType;
+    private Long attachmentFileSize;
 
     public Long getMailId() {
         return mailId;
@@ -228,5 +232,37 @@ public class MailDetailRow {
 
     public void setReplySuggestions(String replySuggestions) {
         this.replySuggestions = replySuggestions;
+    }
+
+    public String getAttachmentFileId() {
+        return attachmentFileId;
+    }
+
+    public void setAttachmentFileId(String attachmentFileId) {
+        this.attachmentFileId = attachmentFileId;
+    }
+
+    public String getAttachmentOriginalFilename() {
+        return attachmentOriginalFilename;
+    }
+
+    public void setAttachmentOriginalFilename(String attachmentOriginalFilename) {
+        this.attachmentOriginalFilename = attachmentOriginalFilename;
+    }
+
+    public String getAttachmentContentType() {
+        return attachmentContentType;
+    }
+
+    public void setAttachmentContentType(String attachmentContentType) {
+        this.attachmentContentType = attachmentContentType;
+    }
+
+    public Long getAttachmentFileSize() {
+        return attachmentFileSize;
+    }
+
+    public void setAttachmentFileSize(Long attachmentFileSize) {
+        this.attachmentFileSize = attachmentFileSize;
     }
 }

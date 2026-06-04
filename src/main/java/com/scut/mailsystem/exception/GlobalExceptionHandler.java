@@ -13,6 +13,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -47,6 +48,14 @@ public class GlobalExceptionHandler {
     public ApiResponse<Void> handleMissingServletRequestParameterException(
             MissingServletRequestParameterException exception) {
         return ApiResponse.fail(ErrorCode.PARAM_ERROR, "缺少必要请求参数：" + exception.getParameterName());
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ApiResponse<Void> handleMissingServletRequestPartException(MissingServletRequestPartException exception) {
+        if ("file".equals(exception.getRequestPartName())) {
+            return ApiResponse.fail(ErrorCode.PARAM_ERROR, "文件不能为空");
+        }
+        return ApiResponse.fail(ErrorCode.PARAM_ERROR, "缺少必要请求部分：" + exception.getRequestPartName());
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)

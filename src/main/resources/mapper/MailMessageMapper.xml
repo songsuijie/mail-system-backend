@@ -48,6 +48,10 @@
         <result column="priority" property="priority"/>
         <result column="priority_reason" property="priorityReason"/>
         <result column="reply_suggestions" property="replySuggestions"/>
+        <result column="attachment_file_id" property="attachmentFileId"/>
+        <result column="attachment_original_filename" property="attachmentOriginalFilename"/>
+        <result column="attachment_content_type" property="attachmentContentType"/>
+        <result column="attachment_file_size" property="attachmentFileSize"/>
     </resultMap>
 
     <insert id="insert" parameterType="com.scut.mailsystem.entity.MailMessage"
@@ -56,6 +60,7 @@
             sender_id,
             subject,
             content,
+            attachment_file_id,
             sent_at,
             status,
             sender_deleted,
@@ -65,6 +70,7 @@
             #{senderId},
             #{subject},
             #{content},
+            #{attachmentFileId},
             #{sentAt},
             #{status},
             #{senderDeleted},
@@ -172,13 +178,26 @@
             a.risk_reason,
             COALESCE(a.priority, 'MEDIUM') AS priority,
             a.priority_reason,
-            a.reply_suggestions
+            a.reply_suggestions,
+            m.attachment_file_id,
+            f.original_filename AS attachment_original_filename,
+            f.content_type AS attachment_content_type,
+            f.file_size AS attachment_file_size
         FROM mail_message m
         INNER JOIN mail_recipient r ON r.mail_id = m.id
         INNER JOIN sys_user sender ON sender.id = m.sender_id
         INNER JOIN sys_user recipient ON recipient.id = r.recipient_id
         LEFT JOIN mail_analysis a ON a.mail_id = m.id AND a.recipient_id = r.recipient_id
+        LEFT JOIN file_resource f ON f.file_id = m.attachment_file_id
         WHERE m.id = #{mailId}
         LIMIT 1
+    </select>
+
+    <select id="countRelatedMailUser" resultType="long">
+        SELECT COUNT(1)
+        FROM mail_message m
+        LEFT JOIN mail_recipient r ON r.mail_id = m.id AND r.recipient_id = #{userId}
+        WHERE m.id = #{mailId}
+          AND (m.sender_id = #{userId} OR r.id IS NOT NULL)
     </select>
 </mapper>
