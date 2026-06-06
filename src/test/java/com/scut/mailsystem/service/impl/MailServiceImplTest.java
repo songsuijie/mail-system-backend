@@ -2,6 +2,7 @@ package com.scut.mailsystem.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scut.mailsystem.common.enums.ErrorCode;
+import com.scut.mailsystem.entity.MailAnalysis;
 import com.scut.mailsystem.entity.SysUser;
 import com.scut.mailsystem.entity.FileResource;
 import com.scut.mailsystem.exception.BusinessException;
@@ -18,6 +19,7 @@ import com.scut.mailsystem.vo.mail.MailDetailVO;
 import com.scut.mailsystem.vo.mail.MailReadResponse;
 import com.scut.mailsystem.vo.mail.SendMailResponse;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -64,8 +66,65 @@ class MailServiceImplTest {
         assertTrue(detail.getRead());
         assertEquals("paragraph", ((Map<?, ?>) detail.getContent().get(0)).get("type"));
         assertNotNull(detail.getAnalysis());
+        assertEquals("SUCCESS", detail.getAnalysis().getAnalysisStatus());
+        assertEquals(List.of("好的，我会按时提交。"), detail.getAnalysis().getReplySuggestions());
         assertNull(detail.getAttachment());
         verify(mailRecipientMapper).markReadIfUnread(eq(100L), eq(2L), any(LocalDateTime.class));
+    }
+
+    @Test
+    void sendMail_insertsSuccessAnalysisWithSummaryAndReplySuggestions() {
+        SendMailCapture capture = sendMailAndCaptureAnalysis("普通通知", "请提交报告");
+        SendMailResponse response = capture.response();
+        MailAnalysis analysis = capture.analysis();
+
+        assertEquals("SUCCESS", response.getAnalysisStatus());
+        assertEquals("SUCCESS", analysis.getAnalysisStatus());
+        assertEquals("请提交报告", analysis.getSummary());
+        assertNotNull(analysis.getReplySuggestions());
+        assertTrue(analysis.getReplySuggestions().contains("收到，我会尽快处理。"));
+    }
+
+    @Test
+    void sendMail_withDeadlineKeyword_setsHighPriority() {
+        MailAnalysis analysis = sendMailAndCaptureAnalysis("紧急通知", "请在今天截止前提交材料").analysis();
+
+        assertEquals("HIGH", analysis.getPriority());
+        assertTrue(analysis.getPriorityScore() >= 80);
+        assertTrue(analysis.getPriorityReason().contains("截止"));
+    }
+
+    @Test
+    void sendMail_withSpamKeywords_setsSpamFlagAndLevel() {
+        MailAnalysis analysis = sendMailAndCaptureAnalysis("中奖通知", "点击领取优惠券，免费领取返现礼包").analysis();
+
+        assertEquals(1, analysis.getSpamFlag());
+        assertTrue(List.of("LOW", "MEDIUM", "HIGH").contains(analysis.getSpamLevel()));
+        assertTrue(analysis.getSpamScore() > 0);
+    }
+
+    @Test
+    void sendMail_withGiftCardPaymentSignal_setsSpamAndRiskReason() {
+        MailAnalysis analysis = sendMailAndCaptureAnalysis("紧急付款", "请立即购买 Apple gift card 并发送 PIN").analysis();
+
+        assertEquals(1, analysis.getSpamFlag());
+        assertTrue(List.of("LOW", "MEDIUM", "HIGH").contains(analysis.getSpamLevel()));
+        assertTrue(List.of("MEDIUM", "HIGH").contains(analysis.getRiskLevel()));
+        assertTrue(analysis.getSpamReason().contains("gift card"));
+        assertTrue(analysis.getRiskReason().contains("gift card"));
+    }
+
+    @Test
+    void sendMail_withRiskKeywords_setsRiskLevel() {
+        MailAnalysis analysis = sendMailAndCaptureAnalysis(
+                "账号异常",
+                "请立即登录 http://example.com 或 t.cn/abc 修改密码并输入验证码"
+        ).analysis();
+
+        assertTrue(List.of("MEDIUM", "HIGH").contains(analysis.getRiskLevel()));
+        assertTrue(analysis.getRiskScore() > 0);
+        assertNotNull(analysis.getRiskReason());
+        assertTrue(analysis.getRiskReason().contains("t.cn"));
     }
 
     @Test
@@ -86,6 +145,7 @@ class MailServiceImplTest {
         SendMailResponse response = mailService.sendMail(authHeader(1L, "alice"), request);
 
         assertEquals(100L, response.getMailId());
+        assertEquals("SUCCESS", response.getAnalysisStatus());
         verify(fileResourceMapper).bindToMail("file_test_001", 100L, "BOUND");
     }
 
@@ -202,15 +262,41 @@ class MailServiceImplTest {
     }
 
     private SendMailRequest sendMailRequest(String recipientUsername, String attachmentFileId) {
+        return sendMailRequest(recipientUsername, "实验报告提交提醒", "请提交报告", attachmentFileId);
+    }
+
+    private SendMailRequest sendMailRequest(String recipientUsername,
+                                            String subject,
+                                            String text,
+                                            String attachmentFileId) {
         SendMailRequest request = new SendMailRequest();
         request.setRecipientUsername(recipientUsername);
-        request.setSubject("实验报告提交提醒");
+        request.setSubject(subject);
         request.setContent(List.of(Map.of(
                 "type", "paragraph",
-                "children", List.of(Map.of("type", "text", "text", "请提交报告"))
+                "children", List.of(Map.of("type", "text", "text", text))
         )));
         request.setAttachmentFileId(attachmentFileId);
         return request;
+    }
+
+    private SendMailCapture sendMailAndCaptureAnalysis(String subject, String text) {
+        SysUser alice = activeUser(1L, "alice", "Alice");
+        SysUser bob = activeUser(2L, "bob", "Bob");
+        when(sysUserMapper.selectActiveById(1L)).thenReturn(alice);
+        when(sysUserMapper.selectActiveByUsername("bob")).thenReturn(bob);
+        when(mailMessageMapper.insert(any())).thenAnswer(invocation -> {
+            invocation.getArgument(0, com.scut.mailsystem.entity.MailMessage.class).setId(100L);
+            return 1;
+        });
+
+        SendMailResponse response = mailService.sendMail(
+                authHeader(1L, "alice"),
+                sendMailRequest("bob", subject, text, null)
+        );
+        ArgumentCaptor<MailAnalysis> analysisCaptor = ArgumentCaptor.forClass(MailAnalysis.class);
+        verify(mailAnalysisMapper).insert(analysisCaptor.capture());
+        return new SendMailCapture(response, analysisCaptor.getValue());
     }
 
     private FileResource uploadedFile(String fileId, Long uploaderId) {
@@ -238,5 +324,8 @@ class MailServiceImplTest {
 
     private String authHeader(Long userId, String username) {
         return "Bearer " + TokenUtils.generateToken(userId, username);
+    }
+
+    private record SendMailCapture(SendMailResponse response, MailAnalysis analysis) {
     }
 }
