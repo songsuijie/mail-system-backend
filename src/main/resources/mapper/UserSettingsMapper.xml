@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.scut.mailsystem.mapper.UserSettingsMapper">
+
+    <resultMap id="UserSettingsResultMap" type="com.scut.mailsystem.entity.UserSettings">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="ai_enabled" property="aiEnabled"/>
+        <result column="auto_reply_enabled" property="autoReplyEnabled"/>
+        <result column="priority_sort_enabled" property="prioritySortEnabled"/>
+        <result column="provider" property="provider"/>
+        <result column="base_url" property="baseUrl"/>
+        <result column="model_name" property="modelName"/>
+        <result column="api_key_encrypted" property="apiKeyEncrypted"/>
+        <result column="api_key_mask" property="apiKeyMask"/>
+        <result column="timeout_ms" property="timeoutMs"/>
+        <result column="max_tokens" property="maxTokens"/>
+        <result column="temperature" property="temperature"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <sql id="BaseColumnList">
+        id,
+        user_id,
+        ai_enabled,
+        auto_reply_enabled,
+        priority_sort_enabled,
+        provider,
+        base_url,
+        model_name,
+        api_key_encrypted,
+        api_key_mask,
+        timeout_ms,
+        max_tokens,
+        temperature,
+        created_at,
+        updated_at
+    </sql>
+
+    <select id="selectByUserId" resultMap="UserSettingsResultMap">
+        SELECT
+        <include refid="BaseColumnList"/>
+        FROM user_settings
+        WHERE user_id = #{userId}
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.scut.mailsystem.entity.UserSettings"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_settings (
+            user_id,
+            ai_enabled,
+            auto_reply_enabled,
+            priority_sort_enabled,
+            provider,
+            base_url,
+            model_name,
+            api_key_encrypted,
+            api_key_mask,
+            timeout_ms,
+            max_tokens,
+            temperature,
+            created_at,
+            updated_at
+        ) VALUES (
+            #{userId},
+            #{aiEnabled},
+            #{autoReplyEnabled},
+            #{prioritySortEnabled},
+            #{provider},
+            #{baseUrl},
+            #{modelName},
+            #{apiKeyEncrypted},
+            #{apiKeyMask},
+            #{timeoutMs},
+            #{maxTokens},
+            #{temperature},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+
+    <update id="updateByUserId" parameterType="com.scut.mailsystem.entity.UserSettings">
+        UPDATE user_settings
+        SET
+            ai_enabled = #{aiEnabled},
+            auto_reply_enabled = #{autoReplyEnabled},
+            priority_sort_enabled = #{prioritySortEnabled},
+            provider = #{provider},
+            base_url = #{baseUrl},
+            model_name = #{modelName},
+            api_key_encrypted = #{apiKeyEncrypted},
+            api_key_mask = #{apiKeyMask},
+            timeout_ms = #{timeoutMs},
+            max_tokens = #{maxTokens},
+            temperature = #{temperature},
+            updated_at = #{updatedAt}
+        WHERE user_id = #{userId}
+    </update>
+</mapper>
