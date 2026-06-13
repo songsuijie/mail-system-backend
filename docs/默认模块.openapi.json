@@ -3955,13 +3955,15 @@
             "example": true
           },
           "provider": {
-            "allOf": [
+            "oneOf": [
               {
                 "$ref": "#/components/schemas/Provider"
+              },
+              {
+                "type": "null"
               }
             ],
-            "description": "当前模型服务商",
-            "type": "null"
+            "description": "当前模型服务商；未配置模型时为 null"
           },
           "modelName": {
             "type": "string",
