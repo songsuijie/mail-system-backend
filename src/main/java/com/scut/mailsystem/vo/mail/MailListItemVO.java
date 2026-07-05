@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
 public class MailListItemVO {
 
     private Long mailId;
+    private Long threadId;
+    private Long replyToMailId;
     private String subject;
     private String snippet;
     private MailUserVO sender;
@@ -19,6 +21,8 @@ public class MailListItemVO {
     private String riskLabel;
     private String riskReason;
     private String analysisStatus;
+    private LocalDateTime deletedAt;
+    private String spamLevelLabel;
 
     public Long getMailId() {
         return mailId;
@@ -26,6 +30,22 @@ public class MailListItemVO {
 
     public void setMailId(Long mailId) {
         this.mailId = mailId;
+    }
+
+    public Long getThreadId() {
+        return threadId;
+    }
+
+    public void setThreadId(Long threadId) {
+        this.threadId = threadId;
+    }
+
+    public Long getReplyToMailId() {
+        return replyToMailId;
+    }
+
+    public void setReplyToMailId(Long replyToMailId) {
+        this.replyToMailId = replyToMailId;
     }
 
     public String getSubject() {
@@ -138,5 +158,21 @@ public class MailListItemVO {
 
     public void setAnalysisStatus(String analysisStatus) {
         this.analysisStatus = analysisStatus;
+    }
+
+    public LocalDateTime getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(LocalDateTime deletedAt) {
+        this.deletedAt = deletedAt;
+    }
+
+    public String getSpamLevelLabel() {
+        return spamLevelLabel;
+    }
+
+    public void setSpamLevelLabel(String spamLevelLabel) {
+        this.spamLevelLabel = spamLevelLabel;
     }
 }

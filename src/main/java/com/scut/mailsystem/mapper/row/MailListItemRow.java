@@ -15,6 +15,8 @@ public class MailListItemRow {
     private String recipientNickname;
     private LocalDateTime sentAt;
     private Integer readFlag;
+    private Integer deletedFlag;
+    private LocalDateTime deletedAt;
     private String priority;
     private Integer spamFlag;
     private String spamLevel;
@@ -108,6 +110,22 @@ public class MailListItemRow {
 
     public void setReadFlag(Integer readFlag) {
         this.readFlag = readFlag;
+    }
+
+    public Integer getDeletedFlag() {
+        return deletedFlag;
+    }
+
+    public void setDeletedFlag(Integer deletedFlag) {
+        this.deletedFlag = deletedFlag;
+    }
+
+    public LocalDateTime getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(LocalDateTime deletedAt) {
+        this.deletedAt = deletedAt;
     }
 
     public String getPriority() {

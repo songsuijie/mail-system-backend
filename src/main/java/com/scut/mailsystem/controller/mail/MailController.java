@@ -11,6 +11,8 @@ import com.scut.mailsystem.vo.mail.MailDeleteResponse;
 import com.scut.mailsystem.vo.mail.MailDetailVO;
 import com.scut.mailsystem.vo.mail.MailListItemVO;
 import com.scut.mailsystem.vo.mail.MailReadResponse;
+import com.scut.mailsystem.vo.mail.MailStatisticsVO;
+import com.scut.mailsystem.vo.mail.RestoreMailResponse;
 import com.scut.mailsystem.vo.mail.SendMailResponse;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -57,6 +59,33 @@ public class MailController {
         return ApiResponse.success(mailService.getSent(authorizationHeader, page, size));
     }
 
+    @GetMapping("/trash")
+    public ApiResponse<PageResult<MailListItemVO>> getTrash(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestParam(value = "page", required = false) Integer page,
+            @RequestParam(value = "size", required = false) Integer size,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "startTime", required = false) String startTime,
+            @RequestParam(value = "endTime", required = false) String endTime) {
+        return ApiResponse.success(mailService.getTrash(authorizationHeader, page, size, keyword, startTime, endTime));
+    }
+
+    @GetMapping("/spam")
+    public ApiResponse<PageResult<MailListItemVO>> getSpam(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestParam(value = "page", required = false) Integer page,
+            @RequestParam(value = "size", required = false) Integer size,
+            @RequestParam(value = "spamLevel", required = false) String spamLevel,
+            @RequestParam(value = "riskLevel", required = false) String riskLevel) {
+        return ApiResponse.success(mailService.getSpam(authorizationHeader, page, size, spamLevel, riskLevel));
+    }
+
+    @GetMapping("/statistics")
+    public ApiResponse<MailStatisticsVO> getStatistics(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        return ApiResponse.success(mailService.getStatistics(authorizationHeader));
+    }
+
     @GetMapping("/{mailId}")
     public ApiResponse<MailDetailVO> getMailDetail(
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
@@ -80,5 +109,12 @@ public class MailController {
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
             @PathVariable("mailId") Long mailId) {
         return ApiResponse.success(mailService.deleteMail(authorizationHeader, mailId));
+    }
+
+    @PatchMapping("/{mailId}/restore")
+    public ApiResponse<RestoreMailResponse> restoreMail(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @PathVariable("mailId") Long mailId) {
+        return ApiResponse.success(mailService.restoreMail(authorizationHeader, mailId));
     }
 }

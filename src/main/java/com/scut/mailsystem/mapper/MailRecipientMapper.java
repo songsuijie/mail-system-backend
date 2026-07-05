@@ -18,4 +18,7 @@ public interface MailRecipientMapper {
     int deleteRecipientMailIfNotDeleted(@Param("mailId") Long mailId,
                                         @Param("recipientId") Long recipientId,
                                         @Param("deletedAt") LocalDateTime deletedAt);
+
+    int restoreRecipientMailIfDeleted(@Param("mailId") Long mailId,
+                                      @Param("recipientId") Long recipientId);
 }

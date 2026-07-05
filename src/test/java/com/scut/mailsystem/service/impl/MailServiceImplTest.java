@@ -23,8 +23,10 @@ import com.scut.mailsystem.utils.TokenUtils;
 import com.scut.mailsystem.vo.mail.MailDeleteResponse;
 import com.scut.mailsystem.vo.mail.MailDetailVO;
 import com.scut.mailsystem.vo.mail.MailReadResponse;
+import com.scut.mailsystem.vo.mail.MailStatisticsVO;
 import com.scut.mailsystem.vo.mail.SendEmailData;
 import com.scut.mailsystem.vo.mail.SendMailResponse;
+import com.scut.mailsystem.vo.mail.RestoreMailResponse;
 import com.scut.mailsystem.vo.mail.ThreadDetailVO;
 import com.scut.mailsystem.vo.mail.ThreadListItemVO;
 import org.junit.jupiter.api.Test;
@@ -171,6 +173,63 @@ class MailServiceImplTest {
         assertEquals(1002L, detail.getMails().get(1).getMailId());
         assertEquals(1001L, detail.getMails().get(1).getReplyToMailId());
         verify(mailRecipientMapper).markReadIfUnread(eq(1001L), eq(2L), any(LocalDateTime.class));
+    }
+
+    @Test
+    void getTrash_returnsDeletedRecipientMailsWithDeletedAt() {
+        SysUser bob = activeUser(2L, "bob", "Bob");
+        when(sysUserMapper.selectActiveById(2L)).thenReturn(bob);
+        when(mailMessageMapper.countTrash(2L, "old", null, null)).thenReturn(1L);
+        when(mailMessageMapper.selectTrashPage(2L, "old", null, null, 0, 10))
+                .thenReturn(List.of(mailListItemRow(1003L, 2002L, null, 1, 1, 0)));
+
+        var page = mailService.getTrash(authHeader(2L, "bob"), 1, 10, "old", null, null);
+
+        assertEquals(1L, page.getTotal());
+        assertEquals(1003L, page.getRecords().get(0).getMailId());
+        assertEquals(2002L, page.getRecords().get(0).getThreadId());
+        assertNotNull(page.getRecords().get(0).getDeletedAt());
+    }
+
+    @Test
+    void getSpam_returnsSpamOrRiskMailsWithRiskReason() {
+        SysUser bob = activeUser(2L, "bob", "Bob");
+        when(sysUserMapper.selectActiveById(2L)).thenReturn(bob);
+        when(mailMessageMapper.countSpam(2L, "HIGH", "HIGH")).thenReturn(1L);
+        when(mailMessageMapper.selectSpamPage(2L, "HIGH", "HIGH", 0, 10))
+                .thenReturn(List.of(mailListItemRow(1004L, 2003L, null, 0, 0, 1)));
+
+        var page = mailService.getSpam(authHeader(2L, "bob"), 1, 10, "HIGH", "HIGH");
+
+        assertEquals(1L, page.getTotal());
+        assertTrue(page.getRecords().get(0).getSpam());
+        assertEquals("HIGH", page.getRecords().get(0).getSpamLevel());
+        assertEquals("HIGH", page.getRecords().get(0).getRiskLevel());
+        assertEquals("请核实邮件来源", page.getRecords().get(0).getRiskReason());
+    }
+
+    @Test
+    void getStatisticsAndRestoreMail_returnCurrentUserMailboxState() {
+        SysUser bob = activeUser(2L, "bob", "Bob");
+        when(sysUserMapper.selectActiveById(2L)).thenReturn(bob);
+        when(mailMessageMapper.countInbox(2L)).thenReturn(4L);
+        when(mailMessageMapper.countInboxUnread(2L)).thenReturn(2L);
+        when(mailMessageMapper.countSent(2L)).thenReturn(3L);
+        when(mailMessageMapper.countTrash(2L, null, null, null)).thenReturn(1L);
+        when(mailMessageMapper.countSpam(2L, null, null)).thenReturn(2L);
+        when(mailMessageMapper.selectDetailByMailId(1003L)).thenReturn(detailRow(1003L, 1L, 2L, 1, 1));
+        when(mailRecipientMapper.restoreRecipientMailIfDeleted(1003L, 2L)).thenReturn(1);
+
+        MailStatisticsVO statistics = mailService.getStatistics(authHeader(2L, "bob"));
+        RestoreMailResponse restore = mailService.restoreMail(authHeader(2L, "bob"), 1003L);
+
+        assertEquals(4, statistics.getInboxTotal());
+        assertEquals(2, statistics.getInboxUnread());
+        assertEquals(3, statistics.getSentTotal());
+        assertEquals(1, statistics.getTrashTotal());
+        assertEquals(2, statistics.getSpamTotal());
+        assertEquals(1003L, restore.getMailId());
+        assertEquals(false, restore.getDeleted());
     }
 
     @Test
@@ -430,6 +489,35 @@ class MailServiceImplTest {
         row.setAttachmentOriginalFilename(attachmentFileId == null ? null : "实验报告.pdf");
         row.setAttachmentContentType(attachmentFileId == null ? null : "application/pdf");
         row.setAttachmentFileSize(attachmentFileId == null ? null : 204800L);
+        return row;
+    }
+
+    private com.scut.mailsystem.mapper.row.MailListItemRow mailListItemRow(Long mailId,
+                                                                            Long threadId,
+                                                                            Long replyToMailId,
+                                                                            int readFlag,
+                                                                            int deletedFlag,
+                                                                            int spamFlag) {
+        com.scut.mailsystem.mapper.row.MailListItemRow row = new com.scut.mailsystem.mapper.row.MailListItemRow();
+        row.setMailId(mailId);
+        row.setThreadId(threadId);
+        row.setReplyToMailId(replyToMailId);
+        row.setSubject("旧通知");
+        row.setContent("[{\"type\":\"paragraph\",\"children\":[{\"type\":\"text\",\"text\":\"这是一封已删除邮件。\"}]}]");
+        row.setSenderUsername("alice");
+        row.setSenderNickname("Alice");
+        row.setRecipientUsername("bob");
+        row.setRecipientNickname("Bob");
+        row.setSentAt(LocalDateTime.of(2026, 5, 20, 9, 30));
+        row.setReadFlag(readFlag);
+        row.setDeletedFlag(deletedFlag);
+        row.setDeletedAt(deletedFlag == 1 ? LocalDateTime.of(2026, 5, 26, 10, 0) : null);
+        row.setPriority("HIGH");
+        row.setSpamFlag(spamFlag);
+        row.setSpamLevel(spamFlag == 1 ? "HIGH" : "NONE");
+        row.setRiskLevel(spamFlag == 1 ? "HIGH" : "SAFE");
+        row.setRiskReason(spamFlag == 1 ? "请核实邮件来源" : null);
+        row.setAnalysisStatus("SUCCESS");
         return row;
     }
 

@@ -8,6 +8,8 @@ import com.scut.mailsystem.vo.mail.MailListItemVO;
 import com.scut.mailsystem.vo.mail.MailDeleteResponse;
 import com.scut.mailsystem.vo.mail.MailDetailVO;
 import com.scut.mailsystem.vo.mail.MailReadResponse;
+import com.scut.mailsystem.vo.mail.MailStatisticsVO;
+import com.scut.mailsystem.vo.mail.RestoreMailResponse;
 import com.scut.mailsystem.vo.mail.SendEmailData;
 import com.scut.mailsystem.vo.mail.SendMailResponse;
 import com.scut.mailsystem.vo.mail.ThreadDetailVO;
@@ -30,6 +32,23 @@ public interface MailService {
     MailReadResponse markRead(String authorizationHeader, Long mailId);
 
     MailDeleteResponse deleteMail(String authorizationHeader, Long mailId);
+
+    PageResult<MailListItemVO> getTrash(String authorizationHeader,
+                                        Integer page,
+                                        Integer size,
+                                        String keyword,
+                                        String startTime,
+                                        String endTime);
+
+    PageResult<MailListItemVO> getSpam(String authorizationHeader,
+                                       Integer page,
+                                       Integer size,
+                                       String spamLevel,
+                                       String riskLevel);
+
+    MailStatisticsVO getStatistics(String authorizationHeader);
+
+    RestoreMailResponse restoreMail(String authorizationHeader, Long mailId);
 
     PageResult<ThreadListItemVO> getThreads(String authorizationHeader,
                                             Integer page,

@@ -35,7 +35,9 @@ import com.scut.mailsystem.vo.mail.MailDetailVO;
 import com.scut.mailsystem.vo.mail.MailItemVO;
 import com.scut.mailsystem.vo.mail.MailListItemVO;
 import com.scut.mailsystem.vo.mail.MailReadResponse;
+import com.scut.mailsystem.vo.mail.MailStatisticsVO;
 import com.scut.mailsystem.vo.mail.MailUserVO;
+import com.scut.mailsystem.vo.mail.RestoreMailResponse;
 import com.scut.mailsystem.vo.mail.SendEmailData;
 import com.scut.mailsystem.vo.mail.SendMailResponse;
 import com.scut.mailsystem.vo.mail.ThreadDetailVO;
@@ -348,6 +350,91 @@ public class MailServiceImpl implements MailService {
             mailRecipientMapper.deleteRecipientMailIfNotDeleted(row.getMailId(), currentUser.getId(), deletedAt);
         }
         return new MailDeleteResponse(row.getMailId(), true, deletedAt);
+    }
+
+    @Override
+    public PageResult<MailListItemVO> getTrash(String authorizationHeader,
+                                               Integer page,
+                                               Integer size,
+                                               String keyword,
+                                               String startTime,
+                                               String endTime) {
+        SysUser currentUser = getCurrentActiveUser(authorizationHeader);
+        PageQuery pageQuery = normalizePageQuery(page, size);
+        String normalizedKeyword = trimToNull(keyword);
+        String normalizedStartTime = trimToNull(startTime);
+        String normalizedEndTime = trimToNull(endTime);
+
+        long total = mailMessageMapper.countTrash(
+                currentUser.getId(),
+                normalizedKeyword,
+                normalizedStartTime,
+                normalizedEndTime
+        );
+        List<MailListItemVO> records = new ArrayList<>();
+        if (total > 0) {
+            records = toMailListItemVOList(mailMessageMapper.selectTrashPage(
+                    currentUser.getId(),
+                    normalizedKeyword,
+                    normalizedStartTime,
+                    normalizedEndTime,
+                    pageQuery.offset(),
+                    pageQuery.size()
+            ), false);
+        }
+        return PageResult.of(pageQuery.page(), pageQuery.size(), total, records);
+    }
+
+    @Override
+    public PageResult<MailListItemVO> getSpam(String authorizationHeader,
+                                              Integer page,
+                                              Integer size,
+                                              String spamLevel,
+                                              String riskLevel) {
+        SysUser currentUser = getCurrentActiveUser(authorizationHeader);
+        PageQuery pageQuery = normalizePageQuery(page, size);
+        String normalizedSpamLevel = trimToNull(spamLevel);
+        String normalizedRiskLevel = trimToNull(riskLevel);
+
+        long total = mailMessageMapper.countSpam(currentUser.getId(), normalizedSpamLevel, normalizedRiskLevel);
+        List<MailListItemVO> records = new ArrayList<>();
+        if (total > 0) {
+            records = toMailListItemVOList(mailMessageMapper.selectSpamPage(
+                    currentUser.getId(),
+                    normalizedSpamLevel,
+                    normalizedRiskLevel,
+                    pageQuery.offset(),
+                    pageQuery.size()
+            ), false);
+        }
+        return PageResult.of(pageQuery.page(), pageQuery.size(), total, records);
+    }
+
+    @Override
+    public MailStatisticsVO getStatistics(String authorizationHeader) {
+        SysUser currentUser = getCurrentActiveUser(authorizationHeader);
+        MailStatisticsVO statistics = new MailStatisticsVO();
+        statistics.setInboxTotal(toInt(mailMessageMapper.countInbox(currentUser.getId())));
+        statistics.setInboxUnread(toInt(mailMessageMapper.countInboxUnread(currentUser.getId())));
+        statistics.setSentTotal(toInt(mailMessageMapper.countSent(currentUser.getId())));
+        statistics.setTrashTotal(toInt(mailMessageMapper.countTrash(currentUser.getId(), null, null, null)));
+        statistics.setSpamTotal(toInt(mailMessageMapper.countSpam(currentUser.getId(), null, null)));
+        return statistics;
+    }
+
+    @Override
+    @Transactional
+    public RestoreMailResponse restoreMail(String authorizationHeader, Long mailId) {
+        SysUser currentUser = getCurrentActiveUser(authorizationHeader);
+        MailDetailRow row = getExistingMailDetail(mailId);
+        if (!isCurrentRecipient(currentUser, row)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "无权限恢复该邮件");
+        }
+        if (!isYes(row.getDeletedFlag())) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "邮件未处于已删除状态");
+        }
+        mailRecipientMapper.restoreRecipientMailIfDeleted(row.getMailId(), currentUser.getId());
+        return new RestoreMailResponse(row.getMailId(), false);
     }
 
     @Override
@@ -888,6 +975,8 @@ public class MailServiceImpl implements MailService {
     private MailListItemVO toMailListItemVO(MailListItemRow row, boolean sentList) {
         MailListItemVO item = new MailListItemVO();
         item.setMailId(row.getMailId());
+        item.setThreadId(row.getThreadId());
+        item.setReplyToMailId(row.getReplyToMailId());
         item.setSubject(row.getSubject());
         item.setSnippet(buildSnippet(row.getContent()));
         item.setSender(new MailUserVO(row.getSenderUsername(), row.getSenderNickname()));
@@ -904,10 +993,12 @@ public class MailServiceImpl implements MailService {
         item.setPriorityLabel(toPriorityLabel(priority));
         item.setSpam(row.getSpamFlag() != null && row.getSpamFlag() == FLAG_YES);
         item.setSpamLevel(spamLevel);
+        item.setSpamLevelLabel(toSpamLevelLabel(spamLevel));
         item.setRiskLevel(riskLevel);
         item.setRiskLabel(toRiskLabel(riskLevel));
         item.setRiskReason(row.getRiskReason());
         item.setAnalysisStatus(analysisStatus);
+        item.setDeletedAt(row.getDeletedAt());
         return item;
     }
 
@@ -1093,6 +1184,10 @@ public class MailServiceImpl implements MailService {
     private String trimToNull(String value) {
         String trimmed = trim(value);
         return StringUtils.hasText(trimmed) ? trimmed : null;
+    }
+
+    private int toInt(long value) {
+        return value > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) value;
     }
 
     private record PageQuery(int page, int size, int offset) {

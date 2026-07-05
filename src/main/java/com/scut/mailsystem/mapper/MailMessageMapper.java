@@ -31,6 +31,30 @@ public interface MailMessageMapper {
                                          @Param("offset") Integer offset,
                                          @Param("size") Integer size);
 
+    long countTrash(@Param("userId") Long userId,
+                    @Param("keyword") String keyword,
+                    @Param("startTime") String startTime,
+                    @Param("endTime") String endTime);
+
+    List<MailListItemRow> selectTrashPage(@Param("userId") Long userId,
+                                          @Param("keyword") String keyword,
+                                          @Param("startTime") String startTime,
+                                          @Param("endTime") String endTime,
+                                          @Param("offset") Integer offset,
+                                          @Param("size") Integer size);
+
+    long countSpam(@Param("userId") Long userId,
+                   @Param("spamLevel") String spamLevel,
+                   @Param("riskLevel") String riskLevel);
+
+    List<MailListItemRow> selectSpamPage(@Param("userId") Long userId,
+                                         @Param("spamLevel") String spamLevel,
+                                         @Param("riskLevel") String riskLevel,
+                                         @Param("offset") Integer offset,
+                                         @Param("size") Integer size);
+
+    long countInboxUnread(@Param("userId") Long userId);
+
     MailDetailRow selectDetailByMailId(@Param("mailId") Long mailId);
 
     long countRelatedMailUser(@Param("mailId") Long mailId, @Param("userId") Long userId);
