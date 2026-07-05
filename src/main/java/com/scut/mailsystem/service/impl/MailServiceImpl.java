@@ -19,6 +19,8 @@ import com.scut.mailsystem.exception.BusinessException;
 import com.scut.mailsystem.mapper.FileResourceMapper;
 import com.scut.mailsystem.mapper.row.MailDetailRow;
 import com.scut.mailsystem.mapper.row.MailListItemRow;
+import com.scut.mailsystem.mapper.row.ThreadListItemRow;
+import com.scut.mailsystem.mapper.row.ThreadMailRow;
 import com.scut.mailsystem.mapper.MailAnalysisMapper;
 import com.scut.mailsystem.mapper.MailMessageMapper;
 import com.scut.mailsystem.mapper.MailRecipientMapper;
@@ -30,11 +32,15 @@ import com.scut.mailsystem.vo.mail.MailAnalysisVO;
 import com.scut.mailsystem.vo.mail.MailAttachmentVO;
 import com.scut.mailsystem.vo.mail.MailDeleteResponse;
 import com.scut.mailsystem.vo.mail.MailDetailVO;
+import com.scut.mailsystem.vo.mail.MailItemVO;
 import com.scut.mailsystem.vo.mail.MailListItemVO;
 import com.scut.mailsystem.vo.mail.MailReadResponse;
 import com.scut.mailsystem.vo.mail.MailUserVO;
 import com.scut.mailsystem.vo.mail.SendEmailData;
 import com.scut.mailsystem.vo.mail.SendMailResponse;
+import com.scut.mailsystem.vo.mail.ThreadDetailVO;
+import com.scut.mailsystem.vo.mail.ThreadLastMailVO;
+import com.scut.mailsystem.vo.mail.ThreadListItemVO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -342,6 +348,81 @@ public class MailServiceImpl implements MailService {
             mailRecipientMapper.deleteRecipientMailIfNotDeleted(row.getMailId(), currentUser.getId(), deletedAt);
         }
         return new MailDeleteResponse(row.getMailId(), true, deletedAt);
+    }
+
+    @Override
+    public PageResult<ThreadListItemVO> getThreads(String authorizationHeader,
+                                                   Integer page,
+                                                   Integer size,
+                                                   String keyword,
+                                                   String readStatus,
+                                                   String senderUsername,
+                                                   String priority,
+                                                   String startTime,
+                                                   String endTime) {
+        SysUser currentUser = getCurrentActiveUser(authorizationHeader);
+        PageQuery pageQuery = normalizePageQuery(page, size);
+        String normalizedKeyword = trimToNull(keyword);
+        String normalizedReadStatus = trimToNull(readStatus);
+        String normalizedSenderUsername = trimToNull(senderUsername);
+        String normalizedPriority = trimToNull(priority);
+        String normalizedStartTime = trimToNull(startTime);
+        String normalizedEndTime = trimToNull(endTime);
+
+        long total = mailMessageMapper.countThreads(
+                currentUser.getId(),
+                normalizedKeyword,
+                normalizedReadStatus,
+                normalizedSenderUsername,
+                normalizedPriority,
+                normalizedStartTime,
+                normalizedEndTime
+        );
+        List<ThreadListItemVO> records = new ArrayList<>();
+        if (total > 0) {
+            List<ThreadListItemRow> rows = mailMessageMapper.selectThreadPage(
+                    currentUser.getId(),
+                    normalizedKeyword,
+                    normalizedReadStatus,
+                    normalizedSenderUsername,
+                    normalizedPriority,
+                    normalizedStartTime,
+                    normalizedEndTime,
+                    pageQuery.offset(),
+                    pageQuery.size()
+            );
+            records = toThreadListItemVOList(rows);
+        }
+
+        return PageResult.of(pageQuery.page(), pageQuery.size(), total, records);
+    }
+
+    @Override
+    @Transactional
+    public ThreadDetailVO getThreadDetail(String authorizationHeader, Long threadId, String cursor, Integer limit) {
+        SysUser currentUser = getCurrentActiveUser(authorizationHeader);
+        if (threadId == null || threadId <= 0) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR);
+        }
+        int normalizedLimit = normalizeThreadLimit(limit);
+        long total = mailMessageMapper.countThreadMails(threadId, currentUser.getId());
+        if (total <= 0) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "无权限查看该邮件线程");
+        }
+
+        List<ThreadMailRow> rows = mailMessageMapper.selectThreadMails(threadId, currentUser.getId(), normalizedLimit);
+        boolean hasMore = total > rows.size();
+        markThreadRowsReadIfNecessary(rows, currentUser.getId());
+
+        ThreadDetailVO detail = new ThreadDetailVO();
+        detail.setThreadId(threadId);
+        detail.setSubject(rows.isEmpty() ? "" : rows.get(0).getSubject());
+        detail.setTotal((int) total);
+        detail.setLimit(normalizedLimit);
+        detail.setHasMore(hasMore);
+        detail.setNextCursor(hasMore && !rows.isEmpty() ? String.valueOf(rows.get(rows.size() - 1).getMailId()) : null);
+        detail.setMails(toMailItemVOList(rows));
+        return detail;
     }
 
     private SysUser getCurrentActiveUser(String authorizationHeader) {
@@ -689,6 +770,109 @@ public class MailServiceImpl implements MailService {
         return new PageQuery(normalizedPage, normalizedSize, offset);
     }
 
+    private int normalizeThreadLimit(Integer limit) {
+        if (limit == null || limit < 1) {
+            return 20;
+        }
+        return Math.min(limit, MAX_PAGE_SIZE);
+    }
+
+    private List<ThreadListItemVO> toThreadListItemVOList(List<ThreadListItemRow> rows) {
+        List<ThreadListItemVO> records = new ArrayList<>();
+        if (rows == null || rows.isEmpty()) {
+            return records;
+        }
+        for (ThreadListItemRow row : rows) {
+            records.add(toThreadListItemVO(row));
+        }
+        return records;
+    }
+
+    private ThreadListItemVO toThreadListItemVO(ThreadListItemRow row) {
+        String priority = defaultIfBlank(row.getPriority(), PRIORITY_MEDIUM);
+        String riskLevel = defaultIfBlank(row.getRiskLevel(), RISK_LEVEL_SAFE);
+        String spamLevel = defaultIfBlank(row.getSpamLevel(), SPAM_LEVEL_NONE);
+        String analysisStatus = defaultIfBlank(row.getAnalysisStatus(), ANALYSIS_STATUS_NOT_STARTED);
+
+        ThreadListItemVO item = new ThreadListItemVO();
+        item.setThreadId(row.getThreadId());
+        item.setSubject(row.getSubject());
+        item.setLastSnippet(buildSnippet(row.getLastContent()));
+        item.setLastMail(toThreadLastMailVO(row));
+        item.setUnreadCount(row.getUnreadCount() == null ? 0 : row.getUnreadCount());
+        item.setMailCount(row.getMailCount() == null ? 0 : row.getMailCount());
+        item.setUpdatedAt(row.getUpdatedAt());
+        item.setPriority(priority);
+        item.setPriorityLabel(toPriorityLabel(priority));
+        item.setSpam(row.getSpamFlag() != null && row.getSpamFlag() == FLAG_YES);
+        item.setSpamLevel(spamLevel);
+        item.setRiskLevel(riskLevel);
+        item.setRiskLabel(toRiskLabel(riskLevel));
+        item.setAnalysisStatus(analysisStatus);
+        item.setRiskReason(row.getRiskReason());
+        return item;
+    }
+
+    private ThreadLastMailVO toThreadLastMailVO(ThreadListItemRow row) {
+        ThreadLastMailVO lastMail = new ThreadLastMailVO();
+        lastMail.setMailId(row.getLastMailId());
+        lastMail.setSender(new MailUserVO(row.getLastSenderUsername(), row.getLastSenderNickname()));
+        lastMail.setRecipient(new MailUserVO(row.getLastRecipientUsername(), row.getLastRecipientNickname()));
+        lastMail.setSentAt(row.getLastSentAt() == null ? row.getUpdatedAt() : row.getLastSentAt());
+        return lastMail;
+    }
+
+    private void markThreadRowsReadIfNecessary(List<ThreadMailRow> rows, Long currentUserId) {
+        if (rows == null || rows.isEmpty()) {
+            return;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        for (ThreadMailRow row : rows) {
+            if (currentUserId.equals(row.getRecipientId()) && !isYes(row.getReadFlag())) {
+                mailRecipientMapper.markReadIfUnread(row.getMailId(), currentUserId, now);
+                row.setReadFlag(FLAG_YES);
+            }
+        }
+    }
+
+    private List<MailItemVO> toMailItemVOList(List<ThreadMailRow> rows) {
+        List<MailItemVO> mails = new ArrayList<>();
+        if (rows == null || rows.isEmpty()) {
+            return mails;
+        }
+        for (ThreadMailRow row : rows) {
+            mails.add(toMailItemVO(row));
+        }
+        return mails;
+    }
+
+    private MailItemVO toMailItemVO(ThreadMailRow row) {
+        MailItemVO item = new MailItemVO();
+        item.setMailId(row.getMailId());
+        item.setThreadId(row.getThreadId());
+        item.setReplyToMailId(row.getReplyToMailId());
+        item.setSubject(row.getSubject());
+        item.setContent(parseRichTextContent(row.getContent()));
+        item.setSender(new MailUserVO(row.getSenderUsername(), row.getSenderNickname()));
+        item.setRecipient(new MailUserVO(row.getRecipientUsername(), row.getRecipientNickname()));
+        item.setSentAt(row.getSentAt());
+        item.setAttachment(toMailAttachmentVO(row));
+        return item;
+    }
+
+    private MailAttachmentVO toMailAttachmentVO(ThreadMailRow row) {
+        if (!StringUtils.hasText(row.getAttachmentFileId())) {
+            return null;
+        }
+        MailAttachmentVO attachment = new MailAttachmentVO();
+        attachment.setFileId(row.getAttachmentFileId());
+        attachment.setOriginalFilename(row.getAttachmentOriginalFilename());
+        attachment.setContentType(row.getAttachmentContentType());
+        attachment.setFileSize(row.getAttachmentFileSize());
+        attachment.setDownloadUrl("/api/files/" + row.getAttachmentFileId() + "/download");
+        return attachment;
+    }
+
     private List<MailListItemVO> toMailListItemVOList(List<MailListItemRow> rows, boolean sentList) {
         List<MailListItemVO> records = new ArrayList<>();
         if (rows == null || rows.isEmpty()) {
@@ -904,6 +1088,11 @@ public class MailServiceImpl implements MailService {
 
     private String trim(String value) {
         return value == null ? null : value.trim();
+    }
+
+    private String trimToNull(String value) {
+        String trimmed = trim(value);
+        return StringUtils.hasText(trimmed) ? trimmed : null;
     }
 
     private record PageQuery(int page, int size, int offset) {

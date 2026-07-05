@@ -10,6 +10,8 @@ import com.scut.mailsystem.vo.mail.MailDetailVO;
 import com.scut.mailsystem.vo.mail.MailReadResponse;
 import com.scut.mailsystem.vo.mail.SendEmailData;
 import com.scut.mailsystem.vo.mail.SendMailResponse;
+import com.scut.mailsystem.vo.mail.ThreadDetailVO;
+import com.scut.mailsystem.vo.mail.ThreadListItemVO;
 
 public interface MailService {
 
@@ -28,4 +30,16 @@ public interface MailService {
     MailReadResponse markRead(String authorizationHeader, Long mailId);
 
     MailDeleteResponse deleteMail(String authorizationHeader, Long mailId);
+
+    PageResult<ThreadListItemVO> getThreads(String authorizationHeader,
+                                            Integer page,
+                                            Integer size,
+                                            String keyword,
+                                            String readStatus,
+                                            String senderUsername,
+                                            String priority,
+                                            String startTime,
+                                            String endTime);
+
+    ThreadDetailVO getThreadDetail(String authorizationHeader, Long threadId, String cursor, Integer limit);
 }

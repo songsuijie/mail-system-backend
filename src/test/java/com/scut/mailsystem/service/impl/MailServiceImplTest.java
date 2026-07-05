@@ -17,12 +17,16 @@ import com.scut.mailsystem.mapper.MailMessageMapper;
 import com.scut.mailsystem.mapper.MailRecipientMapper;
 import com.scut.mailsystem.mapper.SysUserMapper;
 import com.scut.mailsystem.mapper.row.MailDetailRow;
+import com.scut.mailsystem.mapper.row.ThreadListItemRow;
+import com.scut.mailsystem.mapper.row.ThreadMailRow;
 import com.scut.mailsystem.utils.TokenUtils;
 import com.scut.mailsystem.vo.mail.MailDeleteResponse;
 import com.scut.mailsystem.vo.mail.MailDetailVO;
 import com.scut.mailsystem.vo.mail.MailReadResponse;
 import com.scut.mailsystem.vo.mail.SendEmailData;
 import com.scut.mailsystem.vo.mail.SendMailResponse;
+import com.scut.mailsystem.vo.mail.ThreadDetailVO;
+import com.scut.mailsystem.vo.mail.ThreadListItemVO;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -115,6 +119,58 @@ class MailServiceImplTest {
         verify(mailRecipientMapper).insert(recipientCaptor.capture());
         assertEquals(1L, recipientCaptor.getValue().getRecipientId());
         verify(mailMessageMapper, never()).updateThreadFields(eq(102L), any(), any());
+    }
+
+    @Test
+    void getThreads_returnsThreadSummaryPageForCurrentUser() {
+        SysUser bob = activeUser(2L, "bob", "Bob");
+        when(sysUserMapper.selectActiveById(2L)).thenReturn(bob);
+        when(mailMessageMapper.countThreads(eq(2L), eq("report"), eq("UNREAD"), eq("alice"), eq("HIGH"), eq(null), eq(null)))
+                .thenReturn(1L);
+        when(mailMessageMapper.selectThreadPage(eq(2L), eq("report"), eq("UNREAD"), eq("alice"), eq("HIGH"), eq(null), eq(null), eq(0), eq(10)))
+                .thenReturn(List.of(threadListItemRow()));
+
+        var page = mailService.getThreads(authHeader(2L, "bob"), 1, 10, "report", "UNREAD", "alice", "HIGH", null, null);
+
+        assertEquals(1, page.getPage());
+        assertEquals(10, page.getSize());
+        assertEquals(1L, page.getTotal());
+        ThreadListItemVO item = page.getRecords().get(0);
+        assertEquals(2001L, item.getThreadId());
+        assertEquals("实验报告提交提醒", item.getSubject());
+        assertEquals("请查收附件中的实验报告。", item.getLastSnippet());
+        assertEquals(1, item.getUnreadCount());
+        assertEquals(2, item.getMailCount());
+        assertEquals("HIGH", item.getPriority());
+        assertEquals("高优先级", item.getPriorityLabel());
+    }
+
+    @Test
+    void getThreadDetail_returnsMailsAscendingAndAutoMarksUnreadRecipientMailsRead() {
+        SysUser bob = activeUser(2L, "bob", "Bob");
+        when(sysUserMapper.selectActiveById(2L)).thenReturn(bob);
+        when(mailMessageMapper.countThreadMails(2001L, 2L)).thenReturn(2L);
+        when(mailMessageMapper.selectThreadMails(2001L, 2L, 20)).thenReturn(List.of(
+                threadMailRow(1001L, null, 1L, 2L, 0, "请查收附件中的实验报告。", "file_001"),
+                threadMailRow(1002L, 1001L, 2L, 1L, 1, "收到，我会查看。", null)
+        ));
+
+        ThreadDetailVO detail = mailService.getThreadDetail(authHeader(2L, "bob"), 2001L, null, 20);
+
+        assertEquals(2001L, detail.getThreadId());
+        assertEquals("实验报告提交提醒", detail.getSubject());
+        assertEquals(2, detail.getTotal());
+        assertEquals(20, detail.getLimit());
+        assertEquals(false, detail.getHasMore());
+        assertNull(detail.getNextCursor());
+        assertEquals(2, detail.getMails().size());
+        assertEquals(1001L, detail.getMails().get(0).getMailId());
+        assertEquals(2001L, detail.getMails().get(0).getThreadId());
+        assertNull(detail.getMails().get(0).getReplyToMailId());
+        assertNotNull(detail.getMails().get(0).getAttachment());
+        assertEquals(1002L, detail.getMails().get(1).getMailId());
+        assertEquals(1001L, detail.getMails().get(1).getReplyToMailId());
+        verify(mailRecipientMapper).markReadIfUnread(eq(1001L), eq(2L), any(LocalDateTime.class));
     }
 
     @Test
@@ -322,6 +378,58 @@ class MailServiceImplTest {
         row.setPriority("HIGH");
         row.setPriorityReason("包含截止日期提醒");
         row.setReplySuggestions("[\"好的，我会按时提交。\"]");
+        return row;
+    }
+
+    private ThreadListItemRow threadListItemRow() {
+        ThreadListItemRow row = new ThreadListItemRow();
+        row.setThreadId(2001L);
+        row.setSubject("实验报告提交提醒");
+        row.setLastMailId(1001L);
+        row.setLastContent("[{\"type\":\"paragraph\",\"children\":[{\"type\":\"text\",\"text\":\"请查收附件中的实验报告。\"}]}]");
+        row.setLastSenderUsername("alice");
+        row.setLastSenderNickname("Alice");
+        row.setLastRecipientUsername("bob");
+        row.setLastRecipientNickname("Bob");
+        row.setUnreadCount(1);
+        row.setMailCount(2);
+        row.setUpdatedAt(LocalDateTime.of(2026, 5, 25, 16, 20));
+        row.setPriority("HIGH");
+        row.setSpamFlag(0);
+        row.setSpamLevel("NONE");
+        row.setRiskLevel("SAFE");
+        row.setRiskReason(null);
+        row.setAnalysisStatus("SUCCESS");
+        return row;
+    }
+
+    private ThreadMailRow threadMailRow(Long mailId,
+                                        Long replyToMailId,
+                                        Long senderId,
+                                        Long recipientId,
+                                        int readFlag,
+                                        String text,
+                                        String attachmentFileId) {
+        ThreadMailRow row = new ThreadMailRow();
+        row.setMailId(mailId);
+        row.setThreadId(2001L);
+        row.setReplyToMailId(replyToMailId);
+        row.setSubject(replyToMailId == null ? "实验报告提交提醒" : "Re: 实验报告提交提醒");
+        row.setContent("[{\"type\":\"paragraph\",\"children\":[{\"type\":\"text\",\"text\":\"" + text + "\"}]}]");
+        row.setSenderId(senderId);
+        row.setSenderUsername(senderId == 1L ? "alice" : "bob");
+        row.setSenderNickname(senderId == 1L ? "Alice" : "Bob");
+        row.setRecipientId(recipientId);
+        row.setRecipientUsername(recipientId == 1L ? "alice" : "bob");
+        row.setRecipientNickname(recipientId == 1L ? "Alice" : "Bob");
+        row.setSentAt(mailId == 1001L
+                ? LocalDateTime.of(2026, 5, 25, 16, 4)
+                : LocalDateTime.of(2026, 5, 25, 16, 20));
+        row.setReadFlag(readFlag);
+        row.setAttachmentFileId(attachmentFileId);
+        row.setAttachmentOriginalFilename(attachmentFileId == null ? null : "实验报告.pdf");
+        row.setAttachmentContentType(attachmentFileId == null ? null : "application/pdf");
+        row.setAttachmentFileSize(attachmentFileId == null ? null : 204800L);
         return row;
     }
 

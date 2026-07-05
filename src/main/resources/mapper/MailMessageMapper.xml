@@ -58,6 +58,47 @@
         <result column="attachment_file_size" property="attachmentFileSize"/>
     </resultMap>
 
+    <resultMap id="ThreadListItemRowResultMap" type="com.scut.mailsystem.mapper.row.ThreadListItemRow">
+        <id column="thread_id" property="threadId"/>
+        <result column="subject" property="subject"/>
+        <result column="last_mail_id" property="lastMailId"/>
+        <result column="last_content" property="lastContent"/>
+        <result column="last_sender_username" property="lastSenderUsername"/>
+        <result column="last_sender_nickname" property="lastSenderNickname"/>
+        <result column="last_recipient_username" property="lastRecipientUsername"/>
+        <result column="last_recipient_nickname" property="lastRecipientNickname"/>
+        <result column="last_sent_at" property="lastSentAt"/>
+        <result column="unread_count" property="unreadCount"/>
+        <result column="mail_count" property="mailCount"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="priority" property="priority"/>
+        <result column="spam_flag" property="spamFlag"/>
+        <result column="spam_level" property="spamLevel"/>
+        <result column="risk_level" property="riskLevel"/>
+        <result column="risk_reason" property="riskReason"/>
+        <result column="analysis_status" property="analysisStatus"/>
+    </resultMap>
+
+    <resultMap id="ThreadMailRowResultMap" type="com.scut.mailsystem.mapper.row.ThreadMailRow">
+        <id column="mail_id" property="mailId"/>
+        <result column="thread_id" property="threadId"/>
+        <result column="reply_to_mail_id" property="replyToMailId"/>
+        <result column="subject" property="subject"/>
+        <result column="content" property="content"/>
+        <result column="sender_id" property="senderId"/>
+        <result column="sender_username" property="senderUsername"/>
+        <result column="sender_nickname" property="senderNickname"/>
+        <result column="recipient_id" property="recipientId"/>
+        <result column="recipient_username" property="recipientUsername"/>
+        <result column="recipient_nickname" property="recipientNickname"/>
+        <result column="sent_at" property="sentAt"/>
+        <result column="read_flag" property="readFlag"/>
+        <result column="attachment_file_id" property="attachmentFileId"/>
+        <result column="attachment_original_filename" property="attachmentOriginalFilename"/>
+        <result column="attachment_content_type" property="attachmentContentType"/>
+        <result column="attachment_file_size" property="attachmentFileSize"/>
+    </resultMap>
+
     <insert id="insert" parameterType="com.scut.mailsystem.entity.MailMessage"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO mail_message (
@@ -219,5 +260,162 @@
         LEFT JOIN mail_recipient r ON r.mail_id = m.id AND r.recipient_id = #{userId}
         WHERE m.id = #{mailId}
           AND (m.sender_id = #{userId} OR r.id IS NOT NULL)
+    </select>
+
+    <select id="countThreads" resultType="long">
+        SELECT COUNT(1)
+        FROM (
+            SELECT COALESCE(m.thread_id, m.id) AS thread_id
+            FROM mail_message m
+            INNER JOIN mail_recipient r ON r.mail_id = m.id
+            INNER JOIN sys_user sender ON sender.id = m.sender_id
+            LEFT JOIN mail_analysis a ON a.mail_id = m.id AND a.recipient_id = r.recipient_id
+            WHERE (m.sender_id = #{userId} OR r.recipient_id = #{userId})
+            <if test="keyword != null">
+              AND (
+                m.subject LIKE CONCAT('%', #{keyword}, '%')
+                OR m.content LIKE CONCAT('%', #{keyword}, '%')
+                OR sender.username LIKE CONCAT('%', #{keyword}, '%')
+                OR sender.nickname LIKE CONCAT('%', #{keyword}, '%')
+              )
+            </if>
+            <if test="readStatus != null and readStatus == 'UNREAD'">
+              AND r.recipient_id = #{userId}
+              AND r.read_flag = 0
+            </if>
+            <if test="readStatus != null and readStatus == 'READ'">
+              AND (m.sender_id = #{userId} OR r.read_flag = 1)
+            </if>
+            <if test="senderUsername != null">
+              AND sender.username = #{senderUsername}
+            </if>
+            <if test="priority != null">
+              AND a.priority = #{priority}
+            </if>
+            <if test="startTime != null">
+              AND m.sent_at &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+              AND m.sent_at &lt;= #{endTime}
+            </if>
+            GROUP BY COALESCE(m.thread_id, m.id)
+        ) t
+    </select>
+
+    <select id="selectThreadPage" resultMap="ThreadListItemRowResultMap">
+        SELECT
+            base.thread_id,
+            last_mail.subject,
+            last_mail.id AS last_mail_id,
+            last_mail.content AS last_content,
+            last_sender.username AS last_sender_username,
+            last_sender.nickname AS last_sender_nickname,
+            last_recipient_user.username AS last_recipient_username,
+            last_recipient_user.nickname AS last_recipient_nickname,
+            last_mail.sent_at AS last_sent_at,
+            base.unread_count,
+            base.mail_count,
+            base.updated_at,
+            COALESCE(last_analysis.priority, 'MEDIUM') AS priority,
+            COALESCE(last_analysis.spam_flag, last_recipient.spam_flag, 0) AS spam_flag,
+            COALESCE(last_analysis.spam_level, last_recipient.spam_level, 'NONE') AS spam_level,
+            COALESCE(last_analysis.risk_level, last_recipient.risk_level, 'SAFE') AS risk_level,
+            last_analysis.risk_reason,
+            COALESCE(last_analysis.analysis_status, 'NOT_STARTED') AS analysis_status
+        FROM (
+            SELECT
+                COALESCE(m.thread_id, m.id) AS thread_id,
+                SUM(CASE WHEN r.recipient_id = #{userId} AND r.read_flag = 0 THEN 1 ELSE 0 END) AS unread_count,
+                COUNT(1) AS mail_count,
+                MAX(m.sent_at) AS updated_at
+            FROM mail_message m
+            INNER JOIN mail_recipient r ON r.mail_id = m.id
+            INNER JOIN sys_user sender ON sender.id = m.sender_id
+            LEFT JOIN mail_analysis a ON a.mail_id = m.id AND a.recipient_id = r.recipient_id
+            WHERE (m.sender_id = #{userId} OR r.recipient_id = #{userId})
+            <if test="keyword != null">
+              AND (
+                m.subject LIKE CONCAT('%', #{keyword}, '%')
+                OR m.content LIKE CONCAT('%', #{keyword}, '%')
+                OR sender.username LIKE CONCAT('%', #{keyword}, '%')
+                OR sender.nickname LIKE CONCAT('%', #{keyword}, '%')
+              )
+            </if>
+            <if test="readStatus != null and readStatus == 'UNREAD'">
+              AND r.recipient_id = #{userId}
+              AND r.read_flag = 0
+            </if>
+            <if test="readStatus != null and readStatus == 'READ'">
+              AND (m.sender_id = #{userId} OR r.read_flag = 1)
+            </if>
+            <if test="senderUsername != null">
+              AND sender.username = #{senderUsername}
+            </if>
+            <if test="priority != null">
+              AND a.priority = #{priority}
+            </if>
+            <if test="startTime != null">
+              AND m.sent_at &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+              AND m.sent_at &lt;= #{endTime}
+            </if>
+            GROUP BY COALESCE(m.thread_id, m.id)
+        ) base
+        INNER JOIN mail_message last_mail ON last_mail.id = (
+            SELECT m2.id
+            FROM mail_message m2
+            INNER JOIN mail_recipient r2 ON r2.mail_id = m2.id
+            WHERE COALESCE(m2.thread_id, m2.id) = base.thread_id
+              AND (m2.sender_id = #{userId} OR r2.recipient_id = #{userId})
+            ORDER BY m2.sent_at DESC, m2.id DESC
+            LIMIT 1
+        )
+        INNER JOIN mail_recipient last_recipient ON last_recipient.mail_id = last_mail.id
+        INNER JOIN sys_user last_sender ON last_sender.id = last_mail.sender_id
+        INNER JOIN sys_user last_recipient_user ON last_recipient_user.id = last_recipient.recipient_id
+        LEFT JOIN mail_analysis last_analysis
+          ON last_analysis.mail_id = last_mail.id
+         AND last_analysis.recipient_id = last_recipient.recipient_id
+        ORDER BY base.updated_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countThreadMails" resultType="long">
+        SELECT COUNT(1)
+        FROM mail_message m
+        INNER JOIN mail_recipient r ON r.mail_id = m.id
+        WHERE COALESCE(m.thread_id, m.id) = #{threadId}
+          AND (m.sender_id = #{userId} OR r.recipient_id = #{userId})
+    </select>
+
+    <select id="selectThreadMails" resultMap="ThreadMailRowResultMap">
+        SELECT
+            m.id AS mail_id,
+            COALESCE(m.thread_id, m.id) AS thread_id,
+            m.reply_to_mail_id,
+            m.subject,
+            m.content,
+            m.sender_id,
+            sender.username AS sender_username,
+            sender.nickname AS sender_nickname,
+            r.recipient_id,
+            recipient.username AS recipient_username,
+            recipient.nickname AS recipient_nickname,
+            m.sent_at,
+            r.read_flag,
+            m.attachment_file_id,
+            f.original_filename AS attachment_original_filename,
+            f.content_type AS attachment_content_type,
+            f.file_size AS attachment_file_size
+        FROM mail_message m
+        INNER JOIN mail_recipient r ON r.mail_id = m.id
+        INNER JOIN sys_user sender ON sender.id = m.sender_id
+        INNER JOIN sys_user recipient ON recipient.id = r.recipient_id
+        LEFT JOIN file_resource f ON f.file_id = m.attachment_file_id
+        WHERE COALESCE(m.thread_id, m.id) = #{threadId}
+          AND (m.sender_id = #{userId} OR r.recipient_id = #{userId})
+        ORDER BY m.sent_at ASC, m.id ASC
+        LIMIT #{limit}
     </select>
 </mapper>
