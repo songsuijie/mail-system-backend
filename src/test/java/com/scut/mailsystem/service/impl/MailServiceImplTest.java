@@ -5,7 +5,11 @@ import com.scut.mailsystem.common.enums.ErrorCode;
 import com.scut.mailsystem.entity.MailAnalysis;
 import com.scut.mailsystem.entity.SysUser;
 import com.scut.mailsystem.entity.FileResource;
+import com.scut.mailsystem.entity.MailMessage;
+import com.scut.mailsystem.entity.MailRecipient;
 import com.scut.mailsystem.exception.BusinessException;
+import com.scut.mailsystem.dto.mail.ReplyEmailRequest;
+import com.scut.mailsystem.dto.mail.SendEmailRequest;
 import com.scut.mailsystem.dto.mail.SendMailRequest;
 import com.scut.mailsystem.mapper.FileResourceMapper;
 import com.scut.mailsystem.mapper.MailAnalysisMapper;
@@ -17,6 +21,7 @@ import com.scut.mailsystem.utils.TokenUtils;
 import com.scut.mailsystem.vo.mail.MailDeleteResponse;
 import com.scut.mailsystem.vo.mail.MailDetailVO;
 import com.scut.mailsystem.vo.mail.MailReadResponse;
+import com.scut.mailsystem.vo.mail.SendEmailData;
 import com.scut.mailsystem.vo.mail.SendMailResponse;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -52,6 +57,65 @@ class MailServiceImplTest {
             fileResourceMapper,
             new ObjectMapper()
     );
+
+    @Test
+    void sendEmail_createsNewThreadAndReturnsMailIdAndThreadId() {
+        SysUser alice = activeUser(1L, "alice", "Alice");
+        SysUser bob = activeUser(2L, "bob", "Bob");
+        when(sysUserMapper.selectActiveById(1L)).thenReturn(alice);
+        when(sysUserMapper.selectActiveByUsername("bob")).thenReturn(bob);
+        when(mailMessageMapper.insert(any())).thenAnswer(invocation -> {
+            invocation.getArgument(0, MailMessage.class).setId(101L);
+            return 1;
+        });
+
+        SendEmailData response = mailService.sendEmail(
+                authHeader(1L, "alice"),
+                sendEmailRequest("bob", "实验报告提交提醒", "请查收附件中的实验报告。", null)
+        );
+
+        assertEquals(101L, response.getMailId());
+        assertEquals(101L, response.getThreadId());
+        ArgumentCaptor<MailMessage> messageCaptor = ArgumentCaptor.forClass(MailMessage.class);
+        verify(mailMessageMapper).insert(messageCaptor.capture());
+        MailMessage inserted = messageCaptor.getValue();
+        assertEquals("实验报告提交提醒", inserted.getSubject());
+        assertNull(inserted.getThreadId());
+        assertNull(inserted.getReplyToMailId());
+        verify(mailMessageMapper).updateThreadFields(101L, 101L, null);
+    }
+
+    @Test
+    void replyEmail_createsReplyInExistingThreadAndTargetsOriginalSender() {
+        SysUser bob = activeUser(2L, "bob", "Bob");
+        when(sysUserMapper.selectActiveById(2L)).thenReturn(bob);
+        MailDetailRow original = detailRow(100L, 1L, 2L, 1, 0);
+        original.setThreadId(2001L);
+        when(mailMessageMapper.selectDetailByMailId(100L)).thenReturn(original);
+        when(mailMessageMapper.insert(any())).thenAnswer(invocation -> {
+            invocation.getArgument(0, MailMessage.class).setId(102L);
+            return 1;
+        });
+
+        SendEmailData response = mailService.replyEmail(
+                authHeader(2L, "bob"),
+                replyEmailRequest(100L, 2001L, "Re: 实验报告提交提醒", "已收到，我会尽快查看。")
+        );
+
+        assertEquals(102L, response.getMailId());
+        assertEquals(2001L, response.getThreadId());
+        ArgumentCaptor<MailMessage> messageCaptor = ArgumentCaptor.forClass(MailMessage.class);
+        verify(mailMessageMapper).insert(messageCaptor.capture());
+        MailMessage inserted = messageCaptor.getValue();
+        assertEquals(2L, inserted.getSenderId());
+        assertEquals(2001L, inserted.getThreadId());
+        assertEquals(100L, inserted.getReplyToMailId());
+
+        ArgumentCaptor<MailRecipient> recipientCaptor = ArgumentCaptor.forClass(MailRecipient.class);
+        verify(mailRecipientMapper).insert(recipientCaptor.capture());
+        assertEquals(1L, recipientCaptor.getValue().getRecipientId());
+        verify(mailMessageMapper, never()).updateThreadFields(eq(102L), any(), any());
+    }
 
     @Test
     void getMailDetail_recipientUnread_autoMarksReadAndReturnsRichTextContent() {
@@ -278,6 +342,31 @@ class MailServiceImplTest {
         )));
         request.setAttachmentFileId(attachmentFileId);
         return request;
+    }
+
+    private SendEmailRequest sendEmailRequest(String to, String subject, String text, String attachmentFileId) {
+        SendEmailRequest request = new SendEmailRequest();
+        request.setTo(to);
+        request.setSubject(subject);
+        request.setContent(richText(text));
+        request.setAttachmentFileId(attachmentFileId);
+        return request;
+    }
+
+    private ReplyEmailRequest replyEmailRequest(Long mailId, Long threadId, String subject, String text) {
+        ReplyEmailRequest request = new ReplyEmailRequest();
+        request.setMailId(mailId);
+        request.setThreadId(threadId);
+        request.setSubject(subject);
+        request.setContent(richText(text));
+        return request;
+    }
+
+    private List<Object> richText(String text) {
+        return List.of(Map.of(
+                "type", "paragraph",
+                "children", List.of(Map.of("type", "text", "text", text))
+        ));
     }
 
     private SendMailCapture sendMailAndCaptureAnalysis(String subject, String text) {

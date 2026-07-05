@@ -13,6 +13,10 @@ public interface MailMessageMapper {
 
     int insert(MailMessage mailMessage);
 
+    int updateThreadFields(@Param("mailId") Long mailId,
+                           @Param("threadId") Long threadId,
+                           @Param("replyToMailId") Long replyToMailId);
+
     long countInbox(@Param("userId") Long userId);
 
     List<MailListItemRow> selectInboxPage(@Param("userId") Long userId,

@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scut.mailsystem.common.LoginUser;
 import com.scut.mailsystem.common.PageResult;
 import com.scut.mailsystem.common.enums.ErrorCode;
+import com.scut.mailsystem.dto.mail.ReplyEmailRequest;
+import com.scut.mailsystem.dto.mail.SendEmailRequest;
 import com.scut.mailsystem.dto.mail.SendMailRequest;
 import com.scut.mailsystem.entity.FileResource;
 import com.scut.mailsystem.entity.MailAnalysis;
@@ -31,6 +33,7 @@ import com.scut.mailsystem.vo.mail.MailDetailVO;
 import com.scut.mailsystem.vo.mail.MailListItemVO;
 import com.scut.mailsystem.vo.mail.MailReadResponse;
 import com.scut.mailsystem.vo.mail.MailUserVO;
+import com.scut.mailsystem.vo.mail.SendEmailData;
 import com.scut.mailsystem.vo.mail.SendMailResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -137,12 +140,15 @@ public class MailServiceImpl implements MailService {
         LocalDateTime now = LocalDateTime.now();
         MailMessage mailMessage = buildMailMessage(
                 sender.getId(),
+                null,
+                null,
                 subject,
                 content,
                 attachment == null ? null : attachment.getFileId(),
                 now
         );
         mailMessageMapper.insert(mailMessage);
+        mailMessageMapper.updateThreadFields(mailMessage.getId(), mailMessage.getId(), null);
         bindAttachmentIfNecessary(attachment, mailMessage.getId());
 
         MailAnalysis mailAnalysis = buildMailAnalysis(mailMessage.getId(), recipient.getId(), subject, content, now);
@@ -159,6 +165,87 @@ public class MailServiceImpl implements MailService {
                 now,
                 mailAnalysis.getAnalysisStatus()
         );
+    }
+
+    @Override
+    @Transactional
+    public SendEmailData sendEmail(String authorizationHeader, SendEmailRequest request) {
+        if (request == null) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR);
+        }
+
+        SysUser sender = getCurrentActiveUser(authorizationHeader);
+        SysUser recipient = getActiveRecipient(request.getTo());
+        String subject = getSubject(request.getSubject());
+        String content = getContentJson(request.getContent());
+        FileResource attachment = getUsableAttachment(request.getAttachmentFileId(), sender.getId());
+
+        LocalDateTime now = LocalDateTime.now();
+        MailMessage mailMessage = buildMailMessage(
+                sender.getId(),
+                null,
+                null,
+                subject,
+                content,
+                attachment == null ? null : attachment.getFileId(),
+                now
+        );
+        mailMessageMapper.insert(mailMessage);
+        mailMessageMapper.updateThreadFields(mailMessage.getId(), mailMessage.getId(), null);
+        bindAttachmentIfNecessary(attachment, mailMessage.getId());
+
+        MailAnalysis mailAnalysis = buildMailAnalysis(mailMessage.getId(), recipient.getId(), subject, content, now);
+        MailRecipient mailRecipient = buildMailRecipient(mailMessage.getId(), recipient.getId(), mailAnalysis, now);
+        mailRecipientMapper.insert(mailRecipient);
+        insertMailAnalysisSafely(mailAnalysis, mailMessage.getId(), recipient.getId(), now);
+
+        return new SendEmailData(mailMessage.getId(), mailMessage.getId());
+    }
+
+    @Override
+    @Transactional
+    public SendEmailData replyEmail(String authorizationHeader, ReplyEmailRequest request) {
+        if (request == null || request.getMailId() == null || request.getThreadId() == null) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR);
+        }
+
+        SysUser sender = getCurrentActiveUser(authorizationHeader);
+        MailDetailRow original = getExistingMailDetail(request.getMailId());
+        boolean currentIsSender = isCurrentSender(sender, original);
+        boolean currentIsRecipient = isCurrentRecipient(sender, original);
+        if (!currentIsSender && !currentIsRecipient) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        Long originalThreadId = original.getThreadId() == null ? original.getMailId() : original.getThreadId();
+        if (!request.getThreadId().equals(originalThreadId)) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR);
+        }
+
+        Long recipientId = currentIsSender ? original.getRecipientId() : original.getSenderId();
+        String subject = StringUtils.hasText(trim(request.getSubject()))
+                ? trim(request.getSubject())
+                : "Re: " + original.getSubject();
+        String content = getContentJson(request.getContent());
+
+        LocalDateTime now = LocalDateTime.now();
+        MailMessage mailMessage = buildMailMessage(
+                sender.getId(),
+                request.getThreadId(),
+                original.getMailId(),
+                subject,
+                content,
+                null,
+                now
+        );
+        mailMessageMapper.insert(mailMessage);
+
+        MailAnalysis mailAnalysis = buildMailAnalysis(mailMessage.getId(), recipientId, subject, content, now);
+        MailRecipient mailRecipient = buildMailRecipient(mailMessage.getId(), recipientId, mailAnalysis, now);
+        mailRecipientMapper.insert(mailRecipient);
+        insertMailAnalysisSafely(mailAnalysis, mailMessage.getId(), recipientId, now);
+
+        return new SendEmailData(mailMessage.getId(), request.getThreadId());
     }
 
     @Override
@@ -316,7 +403,11 @@ public class MailServiceImpl implements MailService {
     }
 
     private SysUser getActiveRecipient(SendMailRequest request) {
-        String recipientUsername = trim(request.getRecipientUsername());
+        return getActiveRecipient(request.getRecipientUsername());
+    }
+
+    private SysUser getActiveRecipient(String username) {
+        String recipientUsername = trim(username);
         if (!StringUtils.hasText(recipientUsername)) {
             throw new BusinessException(ErrorCode.PARAM_ERROR);
         }
@@ -329,7 +420,11 @@ public class MailServiceImpl implements MailService {
     }
 
     private String getSubject(SendMailRequest request) {
-        String subject = trim(request.getSubject());
+        return getSubject(request.getSubject());
+    }
+
+    private String getSubject(String value) {
+        String subject = trim(value);
         if (!StringUtils.hasText(subject)) {
             throw new BusinessException(ErrorCode.MAIL_SUBJECT_EMPTY);
         }
@@ -337,24 +432,32 @@ public class MailServiceImpl implements MailService {
     }
 
     private String getContentJson(SendMailRequest request) {
-        if (request.getContent() == null || request.getContent().isEmpty()) {
+        return getContentJson(request.getContent());
+    }
+
+    private String getContentJson(List<Object> contentValue) {
+        if (contentValue == null || contentValue.isEmpty()) {
             throw new BusinessException(ErrorCode.MAIL_CONTENT_EMPTY);
         }
 
         try {
-            return objectMapper.writeValueAsString(request.getContent());
+            return objectMapper.writeValueAsString(contentValue);
         } catch (JsonProcessingException exception) {
             throw new BusinessException(ErrorCode.PARAM_ERROR);
         }
     }
 
     private MailMessage buildMailMessage(Long senderId,
+                                         Long threadId,
+                                         Long replyToMailId,
                                          String subject,
                                          String content,
                                          String attachmentFileId,
                                          LocalDateTime now) {
         MailMessage mailMessage = new MailMessage();
         mailMessage.setSenderId(senderId);
+        mailMessage.setThreadId(threadId);
+        mailMessage.setReplyToMailId(replyToMailId);
         mailMessage.setSubject(subject);
         mailMessage.setContent(content);
         mailMessage.setAttachmentFileId(attachmentFileId);

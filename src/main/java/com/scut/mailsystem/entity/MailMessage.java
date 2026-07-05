@@ -6,6 +6,8 @@ public class MailMessage {
 
     private Long id;
     private Long senderId;
+    private Long threadId;
+    private Long replyToMailId;
     private String subject;
     private String content;
     private String attachmentFileId;
@@ -29,6 +31,22 @@ public class MailMessage {
 
     public void setSenderId(Long senderId) {
         this.senderId = senderId;
+    }
+
+    public Long getThreadId() {
+        return threadId;
+    }
+
+    public void setThreadId(Long threadId) {
+        this.threadId = threadId;
+    }
+
+    public Long getReplyToMailId() {
+        return replyToMailId;
+    }
+
+    public void setReplyToMailId(Long replyToMailId) {
+        this.replyToMailId = replyToMailId;
     }
 
     public String getSubject() {

@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
 public class MailListItemRow {
 
     private Long mailId;
+    private Long threadId;
+    private Long replyToMailId;
     private String subject;
     private String content;
     private String senderUsername;
@@ -26,6 +28,22 @@ public class MailListItemRow {
 
     public void setMailId(Long mailId) {
         this.mailId = mailId;
+    }
+
+    public Long getThreadId() {
+        return threadId;
+    }
+
+    public void setThreadId(Long threadId) {
+        this.threadId = threadId;
+    }
+
+    public Long getReplyToMailId() {
+        return replyToMailId;
+    }
+
+    public void setReplyToMailId(Long replyToMailId) {
+        this.replyToMailId = replyToMailId;
     }
 
     public String getSubject() {

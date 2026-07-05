@@ -6,6 +6,8 @@
 
     <resultMap id="MailListItemRowResultMap" type="com.scut.mailsystem.mapper.row.MailListItemRow">
         <id column="mail_id" property="mailId"/>
+        <result column="thread_id" property="threadId"/>
+        <result column="reply_to_mail_id" property="replyToMailId"/>
         <result column="subject" property="subject"/>
         <result column="content" property="content"/>
         <result column="sender_username" property="senderUsername"/>
@@ -24,6 +26,8 @@
 
     <resultMap id="MailDetailRowResultMap" type="com.scut.mailsystem.mapper.row.MailDetailRow">
         <id column="mail_id" property="mailId"/>
+        <result column="thread_id" property="threadId"/>
+        <result column="reply_to_mail_id" property="replyToMailId"/>
         <result column="subject" property="subject"/>
         <result column="content" property="content"/>
         <result column="sender_id" property="senderId"/>
@@ -58,6 +62,8 @@
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO mail_message (
             sender_id,
+            thread_id,
+            reply_to_mail_id,
             subject,
             content,
             attachment_file_id,
@@ -68,6 +74,8 @@
             updated_at
         ) VALUES (
             #{senderId},
+            #{threadId},
+            #{replyToMailId},
             #{subject},
             #{content},
             #{attachmentFileId},
@@ -78,6 +86,14 @@
             #{updatedAt}
         )
     </insert>
+
+    <update id="updateThreadFields">
+        UPDATE mail_message
+        SET thread_id = #{threadId},
+            reply_to_mail_id = #{replyToMailId},
+            updated_at = NOW()
+        WHERE id = #{mailId}
+    </update>
 
     <select id="countInbox" resultType="long">
         SELECT COUNT(1)
@@ -91,6 +107,8 @@
     <select id="selectInboxPage" resultMap="MailListItemRowResultMap">
         SELECT
             m.id AS mail_id,
+            m.thread_id,
+            m.reply_to_mail_id,
             m.subject,
             m.content,
             sender.username AS sender_username,
@@ -127,6 +145,8 @@
     <select id="selectSentPage" resultMap="MailListItemRowResultMap">
         SELECT
             m.id AS mail_id,
+            m.thread_id,
+            m.reply_to_mail_id,
             m.subject,
             m.content,
             sender.username AS sender_username,
