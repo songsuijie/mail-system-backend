@@ -93,6 +93,74 @@ class MailServiceImplTest {
     }
 
     @Test
+    void sendEmail_withAttachmentBindsUploadedFileToCreatedMail() {
+        SysUser alice = activeUser(1L, "alice", "Alice");
+        SysUser bob = activeUser(2L, "bob", "Bob");
+        when(sysUserMapper.selectActiveById(1L)).thenReturn(alice);
+        when(sysUserMapper.selectActiveByUsername("bob")).thenReturn(bob);
+        when(fileResourceMapper.selectByFileId("file_001")).thenReturn(uploadedFile("file_001", 1L));
+        when(mailMessageMapper.insert(any())).thenAnswer(invocation -> {
+            invocation.getArgument(0, MailMessage.class).setId(101L);
+            return 1;
+        });
+        when(fileResourceMapper.bindToMail("file_001", 101L, "BOUND")).thenReturn(1);
+
+        SendEmailData response = mailService.sendEmail(
+                authHeader(1L, "alice"),
+                sendEmailRequest("bob", "实验报告提交提醒", "请查收附件中的实验报告。", "file_001")
+        );
+
+        assertEquals(101L, response.getMailId());
+        ArgumentCaptor<MailMessage> messageCaptor = ArgumentCaptor.forClass(MailMessage.class);
+        verify(mailMessageMapper).insert(messageCaptor.capture());
+        assertEquals("file_001", messageCaptor.getValue().getAttachmentFileId());
+        verify(fileResourceMapper).bindToMail("file_001", 101L, "BOUND");
+    }
+
+    @Test
+    void sendEmail_withAttachmentUploadedByOtherUserReturnsForbidden() {
+        SysUser alice = activeUser(1L, "alice", "Alice");
+        SysUser bob = activeUser(2L, "bob", "Bob");
+        when(sysUserMapper.selectActiveById(1L)).thenReturn(alice);
+        when(sysUserMapper.selectActiveByUsername("bob")).thenReturn(bob);
+        when(fileResourceMapper.selectByFileId("file_001")).thenReturn(uploadedFile("file_001", 2L));
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> mailService.sendEmail(
+                        authHeader(1L, "alice"),
+                        sendEmailRequest("bob", "实验报告提交提醒", "请查收附件中的实验报告。", "file_001")
+                )
+        );
+
+        assertEquals(ErrorCode.FORBIDDEN.getCode(), exception.getCode());
+        verify(mailMessageMapper, never()).insert(any());
+    }
+
+    @Test
+    void sendEmail_withAlreadyBoundAttachmentReturnsParamError() {
+        SysUser alice = activeUser(1L, "alice", "Alice");
+        SysUser bob = activeUser(2L, "bob", "Bob");
+        FileResource file = uploadedFile("file_001", 1L);
+        file.setMailId(99L);
+        file.setStatus("BOUND");
+        when(sysUserMapper.selectActiveById(1L)).thenReturn(alice);
+        when(sysUserMapper.selectActiveByUsername("bob")).thenReturn(bob);
+        when(fileResourceMapper.selectByFileId("file_001")).thenReturn(file);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> mailService.sendEmail(
+                        authHeader(1L, "alice"),
+                        sendEmailRequest("bob", "实验报告提交提醒", "请查收附件中的实验报告。", "file_001")
+                )
+        );
+
+        assertEquals(ErrorCode.PARAM_ERROR.getCode(), exception.getCode());
+        verify(mailMessageMapper, never()).insert(any());
+    }
+
+    @Test
     void replyEmail_createsReplyInExistingThreadAndTargetsOriginalSender() {
         SysUser bob = activeUser(2L, "bob", "Bob");
         when(sysUserMapper.selectActiveById(2L)).thenReturn(bob);
