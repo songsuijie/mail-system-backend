@@ -14,4 +14,6 @@ public interface SysUserMapper {
     SysUser selectActiveById(@Param("id") Long id);
 
     int insert(SysUser user);
+
+    int updatePasswordHash(@Param("passwordHash") String passwordHash, @Param("id") Long id);
 }

@@ -78,4 +78,13 @@
             #{deleted}
         )
     </insert>
+
+    <update id="updatePasswordHash">
+        UPDATE sys_user
+        SET password_hash = #{passwordHash},
+            updated_at = NOW()
+        WHERE id = #{id}
+          AND status = 1
+          AND deleted = 0
+    </update>
 </mapper>

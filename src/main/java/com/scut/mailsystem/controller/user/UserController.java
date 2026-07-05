@@ -2,6 +2,7 @@ package com.scut.mailsystem.controller.user;
 
 import com.scut.mailsystem.common.ApiResponse;
 import com.scut.mailsystem.dto.settings.UserSettingsUpdateRequest;
+import com.scut.mailsystem.dto.user.ChangePasswordRequest;
 import com.scut.mailsystem.service.settings.UserSettingsService;
 import com.scut.mailsystem.service.user.UserService;
 import com.scut.mailsystem.vo.settings.UserSettingsVO;
@@ -29,6 +30,15 @@ public class UserController {
     public ApiResponse<CurrentUserVO> getCurrentUser(@RequestHeader(value = "Authorization", required = false)
                                                      String authorizationHeader) {
         return ApiResponse.success(userService.getCurrentUser(authorizationHeader));
+    }
+
+    @PutMapping("/password")
+    public ApiResponse<Void> changePassword(@RequestHeader(value = "Authorization", required = false)
+                                            String authorizationHeader,
+                                            @RequestBody(required = false)
+                                            ChangePasswordRequest request) {
+        userService.changePassword(authorizationHeader, request);
+        return ApiResponse.success();
     }
 
     @GetMapping("/settings")
