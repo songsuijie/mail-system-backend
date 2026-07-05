@@ -7,4 +7,6 @@ import org.apache.ibatis.annotations.Mapper;
 public interface MailAnalysisMapper {
 
     int insert(MailAnalysis mailAnalysis);
+
+    int updateByMailAndRecipient(MailAnalysis mailAnalysis);
 }

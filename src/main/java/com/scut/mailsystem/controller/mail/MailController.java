@@ -13,6 +13,7 @@ import com.scut.mailsystem.vo.mail.MailListItemVO;
 import com.scut.mailsystem.vo.mail.MailReadResponse;
 import com.scut.mailsystem.vo.mail.MailStatisticsVO;
 import com.scut.mailsystem.vo.mail.RestoreMailResponse;
+import com.scut.mailsystem.vo.mail.RetryAnalysisResponse;
 import com.scut.mailsystem.vo.mail.SendMailResponse;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -116,5 +117,12 @@ public class MailController {
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
             @PathVariable("mailId") Long mailId) {
         return ApiResponse.success(mailService.restoreMail(authorizationHeader, mailId));
+    }
+
+    @PostMapping("/{mailId}/analysis/retry")
+    public ApiResponse<RetryAnalysisResponse> retryAnalysis(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @PathVariable("mailId") Long mailId) {
+        return ApiResponse.success(mailService.retryAnalysis(authorizationHeader, mailId));
     }
 }

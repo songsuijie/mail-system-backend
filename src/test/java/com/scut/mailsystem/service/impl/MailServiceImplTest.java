@@ -27,6 +27,7 @@ import com.scut.mailsystem.vo.mail.MailStatisticsVO;
 import com.scut.mailsystem.vo.mail.SendEmailData;
 import com.scut.mailsystem.vo.mail.SendMailResponse;
 import com.scut.mailsystem.vo.mail.RestoreMailResponse;
+import com.scut.mailsystem.vo.mail.RetryAnalysisResponse;
 import com.scut.mailsystem.vo.mail.ThreadDetailVO;
 import com.scut.mailsystem.vo.mail.ThreadListItemVO;
 import org.junit.jupiter.api.Test;
@@ -230,6 +231,25 @@ class MailServiceImplTest {
         assertEquals(2, statistics.getSpamTotal());
         assertEquals(1003L, restore.getMailId());
         assertEquals(false, restore.getDeleted());
+    }
+
+    @Test
+    void retryAnalysis_updatesExistingAnalysisForRelatedMailUser() {
+        SysUser bob = activeUser(2L, "bob", "Bob");
+        when(sysUserMapper.selectActiveById(2L)).thenReturn(bob);
+        when(mailMessageMapper.selectDetailByMailId(1001L)).thenReturn(detailRow(1001L, 1L, 2L, 1, 0));
+        when(mailAnalysisMapper.updateByMailAndRecipient(any(MailAnalysis.class))).thenReturn(1);
+
+        RetryAnalysisResponse response = mailService.retryAnalysis(authHeader(2L, "bob"), 1001L);
+
+        assertEquals(1001L, response.getMailId());
+        assertEquals("SUCCESS", response.getAnalysisStatus());
+        ArgumentCaptor<MailAnalysis> analysisCaptor = ArgumentCaptor.forClass(MailAnalysis.class);
+        verify(mailAnalysisMapper).updateByMailAndRecipient(analysisCaptor.capture());
+        assertEquals(1001L, analysisCaptor.getValue().getMailId());
+        assertEquals(2L, analysisCaptor.getValue().getRecipientId());
+        assertEquals("SUCCESS", analysisCaptor.getValue().getAnalysisStatus());
+        verify(mailAnalysisMapper, never()).insert(any(MailAnalysis.class));
     }
 
     @Test

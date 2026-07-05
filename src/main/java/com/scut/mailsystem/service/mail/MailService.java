@@ -10,6 +10,7 @@ import com.scut.mailsystem.vo.mail.MailDetailVO;
 import com.scut.mailsystem.vo.mail.MailReadResponse;
 import com.scut.mailsystem.vo.mail.MailStatisticsVO;
 import com.scut.mailsystem.vo.mail.RestoreMailResponse;
+import com.scut.mailsystem.vo.mail.RetryAnalysisResponse;
 import com.scut.mailsystem.vo.mail.SendEmailData;
 import com.scut.mailsystem.vo.mail.SendMailResponse;
 import com.scut.mailsystem.vo.mail.ThreadDetailVO;
@@ -49,6 +50,8 @@ public interface MailService {
     MailStatisticsVO getStatistics(String authorizationHeader);
 
     RestoreMailResponse restoreMail(String authorizationHeader, Long mailId);
+
+    RetryAnalysisResponse retryAnalysis(String authorizationHeader, Long mailId);
 
     PageResult<ThreadListItemVO> getThreads(String authorizationHeader,
                                             Integer page,

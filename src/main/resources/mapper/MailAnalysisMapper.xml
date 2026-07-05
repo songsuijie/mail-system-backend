@@ -50,4 +50,27 @@
             #{updatedAt}
         )
     </insert>
+
+    <update id="updateByMailAndRecipient" parameterType="com.scut.mailsystem.entity.MailAnalysis">
+        UPDATE mail_analysis
+        SET analysis_status = #{analysisStatus},
+            priority = #{priority},
+            priority_score = #{priorityScore},
+            priority_reason = #{priorityReason},
+            spam_flag = #{spamFlag},
+            spam_score = #{spamScore},
+            spam_level = #{spamLevel},
+            spam_reason = #{spamReason},
+            risk_level = #{riskLevel},
+            risk_score = #{riskScore},
+            risk_reason = #{riskReason},
+            summary = #{summary},
+            reply_suggestions = #{replySuggestions},
+            ai_provider = #{aiProvider},
+            model_name = #{modelName},
+            ai_error_message = #{aiErrorMessage},
+            updated_at = #{updatedAt}
+        WHERE mail_id = #{mailId}
+          AND recipient_id = #{recipientId}
+    </update>
 </mapper>

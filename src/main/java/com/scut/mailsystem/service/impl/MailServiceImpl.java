@@ -38,6 +38,7 @@ import com.scut.mailsystem.vo.mail.MailReadResponse;
 import com.scut.mailsystem.vo.mail.MailStatisticsVO;
 import com.scut.mailsystem.vo.mail.MailUserVO;
 import com.scut.mailsystem.vo.mail.RestoreMailResponse;
+import com.scut.mailsystem.vo.mail.RetryAnalysisResponse;
 import com.scut.mailsystem.vo.mail.SendEmailData;
 import com.scut.mailsystem.vo.mail.SendMailResponse;
 import com.scut.mailsystem.vo.mail.ThreadDetailVO;
@@ -435,6 +436,27 @@ public class MailServiceImpl implements MailService {
         }
         mailRecipientMapper.restoreRecipientMailIfDeleted(row.getMailId(), currentUser.getId());
         return new RestoreMailResponse(row.getMailId(), false);
+    }
+
+    @Override
+    @Transactional
+    public RetryAnalysisResponse retryAnalysis(String authorizationHeader, Long mailId) {
+        SysUser currentUser = getCurrentActiveUser(authorizationHeader);
+        MailDetailRow row = getExistingMailDetail(mailId);
+        boolean recipient = isCurrentRecipient(currentUser, row);
+        boolean sender = isCurrentSender(currentUser, row);
+        if (!sender && !recipient) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "无权限重新分析该邮件");
+        }
+
+        Long analysisRecipientId = recipient ? currentUser.getId() : row.getRecipientId();
+        LocalDateTime now = LocalDateTime.now();
+        MailAnalysis analysis = buildMailAnalysis(row.getMailId(), analysisRecipientId, row.getSubject(), row.getContent(), now);
+        int updated = mailAnalysisMapper.updateByMailAndRecipient(analysis);
+        if (updated == 0) {
+            mailAnalysisMapper.insert(analysis);
+        }
+        return new RetryAnalysisResponse(row.getMailId(), analysis.getAnalysisStatus());
     }
 
     @Override
