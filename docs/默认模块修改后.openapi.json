@@ -28,10 +28,10 @@
       "name": "AI"
     },
     {
-      "name": "系统接口"
+      "name": "文件"
     },
     {
-      "name": "文件"
+      "name": "邮件线程"
     }
   ],
   "paths": {
@@ -1087,6 +1087,176 @@
         ]
       }
     },
+    "/api/mails/sent": {
+      "get": {
+        "summary": "查询已发送列表 P0/P1",
+        "deprecated": false,
+        "description": "查询已发送列表接口，属于 P0/P1。\n\n业务规则：\n- 必须携带有效 Bearer Token。\n- 只查询当前登录用户发送过的邮件。\n- 已发送列表不受收件人的删除状态影响。\n- 当前版本只支持单收件人，因此每封邮件只有一个 `recipient`。\n- `read` 对发件人通常没有意义，可以返回 null。\n- 四个邮件列表统一返回 `MailListItemVO`。",
+        "operationId": "getSentMails",
+        "tags": [
+          "邮件"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "页码，从 1 开始，默认 1",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "每页数量，默认 10",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "description": "搜索主题、正文、收件人用户名或昵称",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recipientUsername",
+            "in": "query",
+            "description": "收件人用户名",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "startTime",
+            "in": "query",
+            "description": "开始时间，按发送时间过滤",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "endTime",
+            "in": "query",
+            "description": "结束时间，按发送时间过滤",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailPageResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "pageInvalid": {
+                    "summary": "分页参数错误",
+                    "value": {
+                      "code": 40000,
+                      "message": "分页参数错误",
+                      "data": null
+                    }
+                  },
+                  "timeRangeInvalid": {
+                    "summary": "时间范围不合法",
+                    "value": {
+                      "code": 40000,
+                      "message": "时间范围不合法",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "未登录或 token 无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "notLogin": {
+                    "summary": "未携带 token",
+                    "value": {
+                      "code": 40002,
+                      "message": "请先登录",
+                      "data": null
+                    }
+                  },
+                  "invalidToken": {
+                    "summary": "token 无效或过期",
+                    "value": {
+                      "code": 40002,
+                      "message": "未登录或 token 无效",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "500": {
+            "description": "系统内部错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "serverError": {
+                    "summary": "系统内部错误",
+                    "value": {
+                      "code": 50000,
+                      "message": "系统内部错误",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/mails/inbox": {
       "get": {
         "summary": "查询收件箱列表 P0/P1",
@@ -1217,6 +1387,167 @@
                     "value": {
                       "code": 40000,
                       "message": "priority 参数不合法",
+                      "data": null
+                    }
+                  },
+                  "timeRangeInvalid": {
+                    "summary": "时间范围不合法",
+                    "value": {
+                      "code": 40000,
+                      "message": "时间范围不合法",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "未登录或 token 无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "notLogin": {
+                    "summary": "未携带 token",
+                    "value": {
+                      "code": 40002,
+                      "message": "请先登录",
+                      "data": null
+                    }
+                  },
+                  "invalidToken": {
+                    "summary": "token 无效或过期",
+                    "value": {
+                      "code": 40002,
+                      "message": "未登录或 token 无效",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "500": {
+            "description": "系统内部错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "serverError": {
+                    "summary": "系统内部错误",
+                    "value": {
+                      "code": 50000,
+                      "message": "系统内部错误",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/mails/trash": {
+      "get": {
+        "summary": "查询已删除列表 P1",
+        "deprecated": false,
+        "description": "查询已删除列表接口，属于 P1。\n\n业务规则：\n- 必须携带有效 Bearer Token。\n- 当前版本删除是收件人侧逻辑删除。\n- 只展示当前登录用户删除过的收件邮件。\n- `deletedAt` 是列表项的非必填字段，主要在已删除列表中返回。\n- 当前版本不强制实现彻底删除。",
+        "operationId": "getTrashMails",
+        "tags": [
+          "邮件"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "页码，从 1 开始，默认 1",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "每页数量，默认 10",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "description": "搜索主题、正文、发件人用户名或昵称",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "startTime",
+            "in": "query",
+            "description": "开始时间，按发送时间过滤",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "endTime",
+            "in": "query",
+            "description": "结束时间，按发送时间过滤",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailPageResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "pageInvalid": {
+                    "summary": "分页参数错误",
+                    "value": {
+                      "code": 40000,
+                      "message": "分页参数错误",
                       "data": null
                     }
                   },
@@ -1717,337 +2048,6 @@
         ]
       }
     },
-    "/api/mails/sent": {
-      "get": {
-        "summary": "查询已发送列表 P0/P1",
-        "deprecated": false,
-        "description": "查询已发送列表接口，属于 P0/P1。\n\n业务规则：\n- 必须携带有效 Bearer Token。\n- 只查询当前登录用户发送过的邮件。\n- 已发送列表不受收件人的删除状态影响。\n- 当前版本只支持单收件人，因此每封邮件只有一个 `recipient`。\n- `read` 对发件人通常没有意义，可以返回 null。\n- 四个邮件列表统一返回 `MailListItemVO`。",
-        "operationId": "getSentMails",
-        "tags": [
-          "邮件"
-        ],
-        "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "description": "页码，从 1 开始，默认 1",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "default": 1
-            }
-          },
-          {
-            "name": "size",
-            "in": "query",
-            "description": "每页数量，默认 10",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "default": 10
-            }
-          },
-          {
-            "name": "keyword",
-            "in": "query",
-            "description": "搜索主题、正文、收件人用户名或昵称",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "recipientUsername",
-            "in": "query",
-            "description": "收件人用户名",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "startTime",
-            "in": "query",
-            "description": "开始时间，按发送时间过滤",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            }
-          },
-          {
-            "name": "endTime",
-            "in": "query",
-            "description": "结束时间，按发送时间过滤",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "查询成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MailPageResponse"
-                }
-              }
-            },
-            "headers": {}
-          },
-          "400": {
-            "description": "请求参数错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "examples": {
-                  "pageInvalid": {
-                    "summary": "分页参数错误",
-                    "value": {
-                      "code": 40000,
-                      "message": "分页参数错误",
-                      "data": null
-                    }
-                  },
-                  "timeRangeInvalid": {
-                    "summary": "时间范围不合法",
-                    "value": {
-                      "code": 40000,
-                      "message": "时间范围不合法",
-                      "data": null
-                    }
-                  }
-                }
-              }
-            },
-            "headers": {}
-          },
-          "401": {
-            "description": "未登录或 token 无效",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "examples": {
-                  "notLogin": {
-                    "summary": "未携带 token",
-                    "value": {
-                      "code": 40002,
-                      "message": "请先登录",
-                      "data": null
-                    }
-                  },
-                  "invalidToken": {
-                    "summary": "token 无效或过期",
-                    "value": {
-                      "code": 40002,
-                      "message": "未登录或 token 无效",
-                      "data": null
-                    }
-                  }
-                }
-              }
-            },
-            "headers": {}
-          },
-          "500": {
-            "description": "系统内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "examples": {
-                  "serverError": {
-                    "summary": "系统内部错误",
-                    "value": {
-                      "code": 50000,
-                      "message": "系统内部错误",
-                      "data": null
-                    }
-                  }
-                }
-              }
-            },
-            "headers": {}
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/mails/trash": {
-      "get": {
-        "summary": "查询已删除列表 P1",
-        "deprecated": false,
-        "description": "查询已删除列表接口，属于 P1。\n\n业务规则：\n- 必须携带有效 Bearer Token。\n- 当前版本删除是收件人侧逻辑删除。\n- 只展示当前登录用户删除过的收件邮件。\n- `deletedAt` 是列表项的非必填字段，主要在已删除列表中返回。\n- 当前版本不强制实现彻底删除。",
-        "operationId": "getTrashMails",
-        "tags": [
-          "邮件"
-        ],
-        "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "description": "页码，从 1 开始，默认 1",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "default": 1
-            }
-          },
-          {
-            "name": "size",
-            "in": "query",
-            "description": "每页数量，默认 10",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "default": 10
-            }
-          },
-          {
-            "name": "keyword",
-            "in": "query",
-            "description": "搜索主题、正文、发件人用户名或昵称",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "startTime",
-            "in": "query",
-            "description": "开始时间，按发送时间过滤",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            }
-          },
-          {
-            "name": "endTime",
-            "in": "query",
-            "description": "结束时间，按发送时间过滤",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "查询成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MailPageResponse"
-                }
-              }
-            },
-            "headers": {}
-          },
-          "400": {
-            "description": "请求参数错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "examples": {
-                  "pageInvalid": {
-                    "summary": "分页参数错误",
-                    "value": {
-                      "code": 40000,
-                      "message": "分页参数错误",
-                      "data": null
-                    }
-                  },
-                  "timeRangeInvalid": {
-                    "summary": "时间范围不合法",
-                    "value": {
-                      "code": 40000,
-                      "message": "时间范围不合法",
-                      "data": null
-                    }
-                  }
-                }
-              }
-            },
-            "headers": {}
-          },
-          "401": {
-            "description": "未登录或 token 无效",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "examples": {
-                  "notLogin": {
-                    "summary": "未携带 token",
-                    "value": {
-                      "code": 40002,
-                      "message": "请先登录",
-                      "data": null
-                    }
-                  },
-                  "invalidToken": {
-                    "summary": "token 无效或过期",
-                    "value": {
-                      "code": 40002,
-                      "message": "未登录或 token 无效",
-                      "data": null
-                    }
-                  }
-                }
-              }
-            },
-            "headers": {}
-          },
-          "500": {
-            "description": "系统内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "examples": {
-                  "serverError": {
-                    "summary": "系统内部错误",
-                    "value": {
-                      "code": 50000,
-                      "message": "系统内部错误",
-                      "data": null
-                    }
-                  }
-                }
-              }
-            },
-            "headers": {}
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
     "/api/mails/spam": {
       "get": {
         "summary": "查询垃圾邮箱列表 P1",
@@ -2224,6 +2224,342 @@
                 "examples": {
                   "serverError": {
                     "summary": "系统内部错误",
+                    "value": {
+                      "code": 50000,
+                      "message": "系统内部错误",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/emails/send": {
+      "post": {
+        "summary": "发送邮件 P0",
+        "deprecated": false,
+        "description": "Bearer Token required. Single recipient only. No CC/BCC. content is RichTextNode[]. Sending creates a new mailId and threadId. AI failure must not block mail sending.",
+        "operationId": "sendEmail",
+        "tags": [
+          "邮件"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendEmailRequest"
+              },
+              "examples": {
+                "success": {
+                  "value": {
+                    "to": "zhangsan",
+                    "subject": "subject",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "children": [
+                          {
+                            "type": "text",
+                            "text": "hello"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "summary": "send email"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendEmailResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "success",
+                    "value": {
+                      "code": 0,
+                      "message": "success",
+                      "data": {
+                        "mailId": 1001,
+                        "threadId": 2001
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "contentEmpty": {
+                    "summary": "contentEmpty",
+                    "value": {
+                      "code": 40008,
+                      "message": "邮件正文不能为空",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "未登录或 token 无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "notLogin": {
+                    "summary": "notLogin",
+                    "value": {
+                      "code": 40002,
+                      "message": "未登录或 token 无效",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "409": {
+            "description": "收件人不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "recipientNotFound": {
+                    "summary": "recipientNotFound",
+                    "value": {
+                      "code": 40006,
+                      "message": "收件人不存在",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "500": {
+            "description": "系统内部错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "serverError": {
+                    "summary": "serverError",
+                    "value": {
+                      "code": 50000,
+                      "message": "系统内部错误",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/emails/reply": {
+      "post": {
+        "summary": "回复邮件 P0",
+        "deprecated": false,
+        "description": "Each reply creates a new mailId, inherits the original threadId, and replyToMailId equals the replied mail id. analysis.replySuggestions are AI suggestions, not actual reply content; actual reply content is returned in GET /api/threads/{threadId} mails[].content.",
+        "operationId": "replyEmail",
+        "tags": [
+          "邮件"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyEmailRequest"
+              },
+              "examples": {
+                "success": {
+                  "value": {
+                    "mailId": 1001,
+                    "subject": "Re: subject",
+                    "Sessionid": 2001,
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "children": [
+                          {
+                            "type": "text",
+                            "text": "reply"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "summary": "success"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplyEmailResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "success",
+                    "value": {
+                      "code": 0,
+                      "message": "success",
+                      "data": {
+                        "mailId": 1002,
+                        "threadId": 2001
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "邮件正文不能为空",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "contentEmpty": {
+                    "summary": "contentEmpty",
+                    "value": {
+                      "code": 40008,
+                      "message": "邮件正文不能为空",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "未登录或 token 无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "notLogin": {
+                    "summary": "notLogin",
+                    "value": {
+                      "code": 40002,
+                      "message": "未登录或 token 无效",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "无权限访问该资源",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "noPermission": {
+                    "summary": "noPermission",
+                    "value": {
+                      "code": 40003,
+                      "message": "无权限访问该资源",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "资源不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "notFound": {
+                    "summary": "notFound",
+                    "value": {
+                      "code": 40004,
+                      "message": "资源不存在",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "500": {
+            "description": "系统内部错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "serverError": {
+                    "summary": "serverError",
                     "value": {
                       "code": 50000,
                       "message": "系统内部错误",
@@ -2846,48 +3182,6 @@
         ]
       }
     },
-    "/api/health": {
-      "get": {
-        "summary": "健康检查",
-        "deprecated": false,
-        "description": "用于检查 mail-system-backend 服务是否正常启动。",
-        "tags": [
-          "系统接口"
-        ],
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {}
-              },
-              "example": {
-                "code": 0,
-                "message": "success",
-                "data": "mail-system-backend is running"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {}
-                }
-              }
-            },
-            "headers": {}
-          }
-        },
-        "security": []
-      }
-    },
     "/api/files": {
       "post": {
         "summary": "上传文件 P1",
@@ -3145,6 +3439,191 @@
           }
         ]
       }
+    },
+    "/api/threads": {
+      "get": {
+        "summary": "查询收件箱线程列表 P0/P1",
+        "deprecated": false,
+        "description": "Inbox list is thread-level summary and does not return full mail body. Default sort is thread updatedAt descending. Frontend may poll GET /api/threads every 5 seconds. keyword searches subject, latest snippet, sender username and sender nickname.",
+        "operationId": "listThreads",
+        "tags": [
+          "邮件线程"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "readStatus",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "senderUsername",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "priority",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "startTime",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endTime",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadPageResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/threads/{threadId}": {
+      "get": {
+        "summary": "查询邮件线程详情 P0/P1",
+        "deprecated": false,
+        "description": "Each item in mails is an independent mail. Replies add new mail records and do not modify previous mails. All mails in one thread keep the same threadId. replyToMailId points only to the directly replied mail. mails are sorted by sentAt ascending. Returned unread mails where current user is recipient are automatically marked read.",
+        "operationId": "getThreadDetail",
+        "tags": [
+          "邮件线程"
+        ],
+        "parameters": [
+          {
+            "name": "threadId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadDetailResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "无权限查看该邮件线程",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "noPermission": {
+                    "summary": "noPermission",
+                    "value": {
+                      "code": 40003,
+                      "message": "无权限查看该邮件线程",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -3385,6 +3864,50 @@
           "HIGH"
         ]
       },
+      "SendMailRequest": {
+        "type": "object",
+        "required": [
+          "recipientUsername",
+          "subject",
+          "content"
+        ],
+        "properties": {
+          "recipientUsername": {
+            "type": "string",
+            "description": "收件人用户名",
+            "example": "zhangsan"
+          },
+          "subject": {
+            "type": "string",
+            "description": "邮件主题",
+            "example": "实验报告提交提醒"
+          },
+          "content": {
+            "type": "array",
+            "description": "邮件正文，富文本数组",
+            "items": {
+              "$ref": "#/components/schemas/RichTextNode"
+            },
+            "example": [
+              {
+                "type": "paragraph",
+                "children": [
+                  {
+                    "type": "text",
+                    "text": "您好，请注意本周五之前提交实验报告。"
+                  }
+                ]
+              }
+            ]
+          },
+          "attachmentFileId": {
+            "type": "string",
+            "description": "附件文件 ID；当前版本一封邮件最多一个附件。先调用 POST /api/files 上传文件，得到 fileId 后再作为本字段传入。",
+            "example": "file_20260603_001"
+          }
+        },
+        "additionalProperties": false
+      },
       "RegisterData": {
         "type": "object",
         "required": [
@@ -3403,6 +3926,43 @@
         },
         "additionalProperties": false
       },
+      "SendMailData": {
+        "type": "object",
+        "required": [
+          "mailId",
+          "subject",
+          "sender",
+          "recipient",
+          "sentAt",
+          "analysisStatus"
+        ],
+        "properties": {
+          "mailId": {
+            "type": "integer",
+            "format": "int64",
+            "example": 1001
+          },
+          "subject": {
+            "type": "string",
+            "example": "实验报告提交提醒"
+          },
+          "sender": {
+            "$ref": "#/components/schemas/UserBrief"
+          },
+          "recipient": {
+            "$ref": "#/components/schemas/UserBrief"
+          },
+          "sentAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-05-25T16:04:00"
+          },
+          "analysisStatus": {
+            "$ref": "#/components/schemas/AnalysisStatus"
+          }
+        },
+        "additionalProperties": false
+      },
       "AnalysisStatus": {
         "type": "string",
         "enum": [
@@ -3412,6 +3972,28 @@
           "FAILED",
           "DISABLED"
         ]
+      },
+      "SendMailResponse": {
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32",
+            "example": 0
+          },
+          "message": {
+            "type": "string",
+            "example": "success"
+          },
+          "data": {
+            "$ref": "#/components/schemas/SendMailData"
+          }
+        }
       },
       "RegisterResponse": {
         "type": "object",
@@ -3435,12 +4017,49 @@
           }
         }
       },
+      "FileUploadData": {
+        "type": "object",
+        "required": [
+          "fileId"
+        ],
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "description": "文件 ID。后续发送邮件时通过 attachmentFileId 使用。",
+            "example": "file_20260603_001"
+          }
+        },
+        "additionalProperties": false
+      },
       "UserMailRole": {
         "type": "string",
         "enum": [
           "SENDER",
           "RECIPIENT"
         ]
+      },
+      "FileUploadResponse": {
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32",
+            "example": 0
+          },
+          "message": {
+            "type": "string",
+            "example": "success"
+          },
+          "data": {
+            "$ref": "#/components/schemas/FileUploadData"
+          }
+        },
+        "additionalProperties": false
       },
       "LoginRequest": {
         "type": "object",
@@ -3456,6 +4075,45 @@
           "password": {
             "type": "string",
             "example": "123456"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MailAttachmentVO": {
+        "type": "object",
+        "required": [
+          "fileId",
+          "originalFilename",
+          "contentType",
+          "fileSize",
+          "downloadUrl"
+        ],
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "description": "附件文件 ID",
+            "example": "file_20260603_001"
+          },
+          "originalFilename": {
+            "type": "string",
+            "description": "原始文件名",
+            "example": "实验报告.pdf"
+          },
+          "contentType": {
+            "type": "string",
+            "description": "文件 MIME 类型",
+            "example": "application/pdf"
+          },
+          "fileSize": {
+            "type": "integer",
+            "format": "int64",
+            "description": "文件大小，单位 byte",
+            "example": 204800
+          },
+          "downloadUrl": {
+            "type": "string",
+            "description": "附件下载地址",
+            "example": "/api/files/file_20260603_001/download"
           }
         },
         "additionalProperties": false
@@ -3539,278 +4197,6 @@
         },
         "additionalProperties": false
       },
-      "LoginUser": {
-        "type": "object",
-        "required": [
-          "username",
-          "nickname",
-          "emailAddress"
-        ],
-        "properties": {
-          "username": {
-            "type": "string",
-            "example": "admin"
-          },
-          "nickname": {
-            "type": "string",
-            "example": "管理员"
-          },
-          "emailAddress": {
-            "type": "string",
-            "example": "admin@mail.com"
-          }
-        },
-        "additionalProperties": false
-      },
-      "SendMailRequest": {
-        "type": "object",
-        "required": [
-          "recipientUsername",
-          "subject",
-          "content"
-        ],
-        "properties": {
-          "recipientUsername": {
-            "type": "string",
-            "description": "收件人用户名",
-            "example": "zhangsan"
-          },
-          "subject": {
-            "type": "string",
-            "description": "邮件主题",
-            "example": "实验报告提交提醒"
-          },
-          "content": {
-            "type": "array",
-            "description": "邮件正文，富文本数组",
-            "items": {
-              "$ref": "#/components/schemas/RichTextNode"
-            },
-            "example": [
-              {
-                "type": "paragraph",
-                "children": [
-                  {
-                    "type": "text",
-                    "text": "您好，请注意本周五之前提交实验报告。"
-                  }
-                ]
-              }
-            ]
-          },
-          "attachmentFileId": {
-            "type": "string",
-            "description": "附件文件 ID；当前版本一封邮件最多一个附件。先调用 POST /api/files 上传文件，得到 fileId 后再作为本字段传入。",
-            "example": "file_20260603_001"
-          }
-        },
-        "additionalProperties": false
-      },
-      "LoginData": {
-        "type": "object",
-        "required": [
-          "token",
-          "user"
-        ],
-        "properties": {
-          "token": {
-            "type": "string",
-            "example": "mock-token-admin-123456"
-          },
-          "user": {
-            "$ref": "#/components/schemas/LoginUser"
-          }
-        },
-        "additionalProperties": false
-      },
-      "SendMailData": {
-        "type": "object",
-        "required": [
-          "mailId",
-          "subject",
-          "sender",
-          "recipient",
-          "sentAt",
-          "analysisStatus"
-        ],
-        "properties": {
-          "mailId": {
-            "type": "integer",
-            "format": "int64",
-            "example": 1001
-          },
-          "subject": {
-            "type": "string",
-            "example": "实验报告提交提醒"
-          },
-          "sender": {
-            "$ref": "#/components/schemas/UserBrief"
-          },
-          "recipient": {
-            "$ref": "#/components/schemas/UserBrief"
-          },
-          "sentAt": {
-            "type": "string",
-            "format": "date-time",
-            "example": "2026-05-25T16:04:00"
-          },
-          "analysisStatus": {
-            "$ref": "#/components/schemas/AnalysisStatus"
-          }
-        },
-        "additionalProperties": false
-      },
-      "LoginResponse": {
-        "type": "object",
-        "required": [
-          "code",
-          "message",
-          "data"
-        ],
-        "properties": {
-          "code": {
-            "type": "integer",
-            "format": "int32",
-            "example": 0
-          },
-          "message": {
-            "type": "string",
-            "example": "success"
-          },
-          "data": {
-            "$ref": "#/components/schemas/LoginData"
-          }
-        }
-      },
-      "SendMailResponse": {
-        "type": "object",
-        "required": [
-          "code",
-          "message",
-          "data"
-        ],
-        "properties": {
-          "code": {
-            "type": "integer",
-            "format": "int32",
-            "example": 0
-          },
-          "message": {
-            "type": "string",
-            "example": "success"
-          },
-          "data": {
-            "$ref": "#/components/schemas/SendMailData"
-          }
-        }
-      },
-      "ChangePasswordRequest": {
-        "type": "object",
-        "required": [
-          "oldPassword",
-          "newPassword",
-          "confirmPassword"
-        ],
-        "properties": {
-          "oldPassword": {
-            "type": "string",
-            "example": "123456"
-          },
-          "newPassword": {
-            "type": "string",
-            "example": "new123456"
-          },
-          "confirmPassword": {
-            "type": "string",
-            "example": "new123456"
-          }
-        },
-        "additionalProperties": false
-      },
-      "FileUploadData": {
-        "type": "object",
-        "required": [
-          "fileId"
-        ],
-        "properties": {
-          "fileId": {
-            "type": "string",
-            "description": "文件 ID。后续发送邮件时通过 attachmentFileId 使用。",
-            "example": "file_20260603_001"
-          }
-        },
-        "additionalProperties": false
-      },
-      "ReadStatus": {
-        "type": "string",
-        "enum": [
-          "ALL",
-          "READ",
-          "UNREAD"
-        ]
-      },
-      "FileUploadResponse": {
-        "type": "object",
-        "required": [
-          "code",
-          "message",
-          "data"
-        ],
-        "properties": {
-          "code": {
-            "type": "integer",
-            "format": "int32",
-            "example": 0
-          },
-          "message": {
-            "type": "string",
-            "example": "success"
-          },
-          "data": {
-            "$ref": "#/components/schemas/FileUploadData"
-          }
-        },
-        "additionalProperties": false
-      },
-      "MailAttachmentVO": {
-        "type": "object",
-        "required": [
-          "fileId",
-          "originalFilename",
-          "contentType",
-          "fileSize",
-          "downloadUrl"
-        ],
-        "properties": {
-          "fileId": {
-            "type": "string",
-            "description": "附件文件 ID",
-            "example": "file_20260603_001"
-          },
-          "originalFilename": {
-            "type": "string",
-            "description": "原始文件名",
-            "example": "实验报告.pdf"
-          },
-          "contentType": {
-            "type": "string",
-            "description": "文件 MIME 类型",
-            "example": "application/pdf"
-          },
-          "fileSize": {
-            "type": "integer",
-            "format": "int64",
-            "description": "文件大小，单位 byte",
-            "example": 204800
-          },
-          "downloadUrl": {
-            "type": "string",
-            "description": "附件下载地址",
-            "example": "/api/files/file_20260603_001/download"
-          }
-        },
-        "additionalProperties": false
-      },
       "MailDetailVO": {
         "type": "object",
         "required": [
@@ -3886,6 +4272,29 @@
         },
         "additionalProperties": false
       },
+      "LoginUser": {
+        "type": "object",
+        "required": [
+          "username",
+          "nickname",
+          "emailAddress"
+        ],
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "admin"
+          },
+          "nickname": {
+            "type": "string",
+            "example": "管理员"
+          },
+          "emailAddress": {
+            "type": "string",
+            "example": "admin@mail.com"
+          }
+        },
+        "additionalProperties": false
+      },
       "MailDetailResponse": {
         "type": "object",
         "required": [
@@ -3907,6 +4316,191 @@
             "$ref": "#/components/schemas/MailDetailVO"
           }
         }
+      },
+      "SendEmailRequest": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "string",
+            "description": "邮件主题",
+            "example": "实验报告提交提醒"
+          },
+          "content": {
+            "type": "array",
+            "description": "邮件正文，富文本数组",
+            "items": {
+              "$ref": "#/components/schemas/RichTextNode"
+            },
+            "example": [
+              {
+                "type": "paragraph",
+                "children": [
+                  {
+                    "type": "text",
+                    "text": "您好，请注意本周五之前提交实验报告。"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "subject",
+          "content"
+        ]
+      },
+      "LoginData": {
+        "type": "object",
+        "required": [
+          "token",
+          "user"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "example": "mock-token-admin-123456"
+          },
+          "user": {
+            "$ref": "#/components/schemas/LoginUser"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SendEmailData": {
+        "type": "object",
+        "properties": {
+          "mailId": {
+            "type": "integer",
+            "format": "int64",
+            "example": 1001
+          },
+          "subject": {
+            "type": "string",
+            "example": "实验报告提交提醒"
+          },
+          "sender": {
+            "$ref": "#/components/schemas/UserBrief"
+          },
+          "recipient": {
+            "$ref": "#/components/schemas/UserBrief"
+          },
+          "sentAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-05-25T16:04:00"
+          },
+          "analysisStatus": {
+            "$ref": "#/components/schemas/AnalysisStatus"
+          },
+          "threadId": {
+            "type": "integer",
+            "format": "int64",
+            "example": 2001
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "mailId",
+          "threadId"
+        ]
+      },
+      "LoginResponse": {
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32",
+            "example": 0
+          },
+          "message": {
+            "type": "string",
+            "example": "success"
+          },
+          "data": {
+            "$ref": "#/components/schemas/LoginData"
+          }
+        }
+      },
+      "SendEmailResponse": {
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32",
+            "example": 0
+          },
+          "message": {
+            "type": "string",
+            "example": "success"
+          },
+          "data": {
+            "$ref": "#/components/schemas/SendEmailData"
+          }
+        }
+      },
+      "ReplyEmailResponse": {
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32",
+            "example": 0
+          },
+          "message": {
+            "type": "string",
+            "example": "success"
+          },
+          "data": {
+            "$ref": "#/components/schemas/SendEmailData"
+          }
+        }
+      },
+      "ChangePasswordRequest": {
+        "type": "object",
+        "required": [
+          "oldPassword",
+          "newPassword",
+          "confirmPassword"
+        ],
+        "properties": {
+          "oldPassword": {
+            "type": "string",
+            "example": "123456"
+          },
+          "newPassword": {
+            "type": "string",
+            "example": "new123456"
+          },
+          "confirmPassword": {
+            "type": "string",
+            "example": "new123456"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReadStatus": {
+        "type": "string",
+        "enum": [
+          "ALL",
+          "READ",
+          "UNREAD"
+        ]
       },
       "Provider": {
         "type": "string",
@@ -4111,7 +4705,8 @@
           "spamLevel",
           "riskLevel",
           "riskLabel",
-          "analysisStatus"
+          "analysisStatus",
+          "riskReason"
         ],
         "properties": {
           "mailId": {
@@ -4511,6 +5106,305 @@
           },
           "data": {
             "$ref": "#/components/schemas/RetryAnalysisData"
+          }
+        }
+      },
+      "ReplyEmailRequest": {
+        "type": "object",
+        "properties": {
+          "mailId": {
+            "type": "integer",
+            "format": "int64",
+            "example": 1001
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RichTextNode"
+            }
+          },
+          "subject": {
+            "type": "string",
+            "example": "Re: subject"
+          },
+          "Sessionid": {
+            "type": "integer",
+            "format": "int64",
+            "example": 2001
+          }
+        },
+        "required": [
+          "mailId",
+          "content",
+          "Sessionid"
+        ]
+      },
+      "MailItemVO": {
+        "type": "object",
+        "required": [
+          "mailId",
+          "threadId",
+          "replyToMailId",
+          "subject",
+          "content",
+          "sender",
+          "recipient",
+          "sentAt"
+        ],
+        "properties": {
+          "mailId": {
+            "type": "integer",
+            "format": "int64",
+            "example": 1002
+          },
+          "threadId": {
+            "type": "integer",
+            "format": "int64",
+            "example": 2001
+          },
+          "replyToMailId": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true,
+            "example": 1001
+          },
+          "subject": {
+            "type": "string",
+            "example": "Re: subject"
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RichTextNode"
+            }
+          },
+          "sender": {
+            "$ref": "#/components/schemas/UserBrief"
+          },
+          "recipient": {
+            "$ref": "#/components/schemas/UserBrief"
+          },
+          "sentAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-05-25T16:20:00"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ThreadDetailVO": {
+        "type": "object",
+        "required": [
+          "threadId",
+          "subject",
+          "total",
+          "limit",
+          "nextCursor",
+          "hasMore",
+          "mails"
+        ],
+        "properties": {
+          "threadId": {
+            "type": "integer",
+            "format": "int64",
+            "example": 2001
+          },
+          "subject": {
+            "type": "string",
+            "example": "subject"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32",
+            "example": 2
+          },
+          "limit": {
+            "type": "integer",
+            "format": "int32",
+            "example": 20
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true,
+            "example": null
+          },
+          "hasMore": {
+            "type": "boolean",
+            "example": false
+          },
+          "mails": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MailItemVO"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ThreadDetailResponse": {
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32",
+            "example": 0
+          },
+          "message": {
+            "type": "string",
+            "example": "success"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ThreadDetailVO"
+          }
+        }
+      },
+      "ThreadListItemVO": {
+        "type": "object",
+        "required": [
+          "threadId",
+          "subject",
+          "lastSnippet",
+          "lastMail",
+          "unreadCount",
+          "mailCount",
+          "updatedAt",
+          "priority",
+          "priorityLabel",
+          "spam",
+          "spamLevel",
+          "riskLevel",
+          "riskLabel",
+          "analysisStatus",
+          "riskReason"
+        ],
+        "properties": {
+          "threadId": {
+            "type": "integer",
+            "format": "int64",
+            "example": 2001
+          },
+          "subject": {
+            "type": "string",
+            "example": "subject"
+          },
+          "lastSnippet": {
+            "type": "string",
+            "example": "snippet"
+          },
+          "lastMail": {
+            "type": "object",
+            "properties": {}
+          },
+          "unreadCount": {
+            "type": "integer",
+            "format": "int32",
+            "example": 1
+          },
+          "mailCount": {
+            "type": "integer",
+            "format": "int32",
+            "example": 2
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-05-25T16:20:00"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/Priority"
+          },
+          "priorityLabel": {
+            "type": "string",
+            "example": "high"
+          },
+          "spam": {
+            "type": "boolean",
+            "example": false
+          },
+          "spamLevel": {
+            "$ref": "#/components/schemas/SpamLevel"
+          },
+          "riskLevel": {
+            "$ref": "#/components/schemas/RiskLevel"
+          },
+          "riskLabel": {
+            "type": "string",
+            "example": "safe"
+          },
+          "analysisStatus": {
+            "$ref": "#/components/schemas/AnalysisStatus"
+          },
+          "riskReason": {
+            "type": "string",
+            "nullable": true,
+            "example": null
+          }
+        },
+        "additionalProperties": false
+      },
+      "ThreadPageData": {
+        "type": "object",
+        "required": [
+          "page",
+          "size",
+          "total",
+          "totalPages",
+          "records"
+        ],
+        "properties": {
+          "page": {
+            "type": "integer",
+            "format": "int32",
+            "example": 1
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32",
+            "example": 10
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64",
+            "example": 4
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32",
+            "example": 1
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ThreadListItemVO"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ThreadPageResponse": {
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32",
+            "example": 0
+          },
+          "message": {
+            "type": "string",
+            "example": "success"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ThreadPageData"
           }
         }
       }

@@ -2884,6 +2884,56 @@
         ]
       }
     },
+    "/api/threads/{threadId}/reply-text": {
+      "get": {
+        "summary": "获取线程最后一封邮件的回复文本 P1",
+        "deprecated": false,
+        "description": "获取线程最后一封邮件的默认回复文本，用于前端展示或填充回复输入框。\n\n业务规则：\n- 必须携带有效 Bearer Token。\n- 当前用户必须有权限查看该线程。\n- 本接口不调用 AI，不重新分析邮件，不生成新的回复内容。\n- 本接口只从线程中最后一封邮件已有的分析结果中提取默认回复文本。\n- replyText 固定取最后一封邮件已有回复建议中的第一条。\n- 如果最后一封邮件没有可用回复文本，则 replyText 返回空字符串。\n- 本接口不发送邮件，不修改邮件正文，不修改回复关系。\n\n401 未登录或 token 无效\n403 无权限查看该线程\n404 线程不存在\n500 系统内部错误",
+        "tags": [
+          "邮件线程"
+        ],
+        "parameters": [
+          {
+            "name": "threadId",
+            "in": "path",
+            "description": "邮件线程 ID",
+            "required": true,
+            "example": 2001,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadReplyTextResponse"
+                },
+                "example": {
+                  "code": 0,
+                  "message": "success",
+                  "data": {
+                    "threadId": 2001,
+                    "sourceMailId": 1004,
+                    "replyText": "收到，我会尽快处理。"
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/threads": {
       "get": {
         "summary": "查询收件箱线程列表 P0/P1",
@@ -3190,6 +3240,139 @@
   },
   "components": {
     "schemas": {
+      "Analysis": {
+        "type": "object",
+        "properties": {
+          "analysisStatus": {
+            "type": "string",
+            "enum": [
+              "NOT_STARTED",
+              "PENDING",
+              "SUCCESS",
+              "FAILED",
+              "DISABLED"
+            ],
+            "description": "AI/规则分析状态"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "spamLevel": {
+            "type": "string",
+            "enum": [
+              "NONE",
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ],
+            "description": "垃圾邮件等级"
+          },
+          "spamLevelLabel": {
+            "type": "string"
+          },
+          "spamReason": {
+            "type": "string"
+          },
+          "riskLevel": {
+            "type": "string",
+            "enum": [
+              "SAFE",
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ],
+            "description": "风险等级"
+          },
+          "riskLabel": {
+            "type": "string"
+          },
+          "riskReason": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ],
+            "description": "邮件优先级"
+          },
+          "priorityLabel": {
+            "type": "string"
+          },
+          "priorityReason": {
+            "type": "string"
+          },
+          "replySuggestions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "AI 回复建议列表"
+          }
+        },
+        "required": [
+          "analysisStatus",
+          "summary",
+          "spamLevel",
+          "spamLevelLabel",
+          "spamReason",
+          "riskLevel",
+          "riskLabel",
+          "riskReason",
+          "priority",
+          "priorityLabel",
+          "priorityReason",
+          "replySuggestions"
+        ]
+      },
+      "ThreadReplyTextData": {
+        "type": "object",
+        "properties": {
+          "threadId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "邮件线程 ID"
+          },
+          "sourceMailId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "回复文本来源邮件 ID，即线程中的最后一封邮件 ID"
+          },
+          "replyText": {
+            "type": "string",
+            "description": "默认回复文本，取最后一封邮件 analysis.replySuggestions 的第一条；没有可用建议时为空字符串\n示例：收到，我会尽快处理。"
+          }
+        },
+        "required": [
+          "threadId",
+          "replyText",
+          "sourceMailId"
+        ]
+      },
+      "ThreadReplyTextResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32",
+            "example": 0
+          },
+          "message": {
+            "type": "string",
+            "example": "success"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ThreadReplyTextData"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "data"
+        ]
+      },
       "ErrorResponse": {
         "type": "object",
         "required": [
@@ -4813,7 +4996,8 @@
         "required": [
           "code",
           "message",
-          "data"
+          "data",
+          "analysis"
         ],
         "properties": {
           "code": {
@@ -4827,6 +5011,10 @@
           },
           "data": {
             "$ref": "#/components/schemas/ThreadDetailVO"
+          },
+          "analysis": {
+            "$ref": "#/components/schemas/Analysis",
+            "nullable": true
           }
         }
       },
