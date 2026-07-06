@@ -10,6 +10,7 @@ import com.scut.mailsystem.mapper.SysUserMapper;
 import com.scut.mailsystem.mapper.UserSettingsMapper;
 import com.scut.mailsystem.service.settings.UserSettingsService;
 import com.scut.mailsystem.utils.AuthHeaderUtils;
+import com.scut.mailsystem.utils.ApiKeyCryptoUtils;
 import com.scut.mailsystem.utils.TokenUtils;
 import com.scut.mailsystem.vo.settings.UserSettingsVO;
 import org.springframework.stereotype.Service;
@@ -18,9 +19,7 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.Base64;
 import java.util.Set;
 
 @Service
@@ -38,7 +37,6 @@ public class UserSettingsServiceImpl implements UserSettingsService {
     private static final int MAX_MAX_TOKENS = 4000;
     private static final BigDecimal MIN_TEMPERATURE = new BigDecimal("0");
     private static final BigDecimal MAX_TEMPERATURE = new BigDecimal("1");
-    private static final byte[] API_KEY_ENCODE_SECRET = "mail-system-api-key-dev-secret".getBytes(StandardCharsets.UTF_8);
     private static final Set<String> SUPPORTED_PROVIDERS = Set.of(
             "qwen", "openai", "deepseek", "kimi", "glm", "siliconflow", "custom"
     );
@@ -181,8 +179,8 @@ public class UserSettingsServiceImpl implements UserSettingsService {
                 if (trimmedApiKey == null) {
                     throw new BusinessException(ErrorCode.PARAM_ERROR, "API Key 不能为空");
                 }
-                settings.setApiKeyEncrypted(encodeApiKey(trimmedApiKey));
-                settings.setApiKeyMask(maskApiKey(trimmedApiKey));
+                settings.setApiKeyEncrypted(ApiKeyCryptoUtils.encodeApiKey(trimmedApiKey));
+                settings.setApiKeyMask(ApiKeyCryptoUtils.maskApiKey(trimmedApiKey));
             }
         }
     }
@@ -250,23 +248,4 @@ public class UserSettingsServiceImpl implements UserSettingsService {
         return value.trim();
     }
 
-    private String encodeApiKey(String apiKey) {
-        byte[] bytes = apiKey.getBytes(StandardCharsets.UTF_8);
-        byte[] encodedBytes = new byte[bytes.length];
-        for (int i = 0; i < bytes.length; i++) {
-            encodedBytes[i] = (byte) (bytes[i] ^ API_KEY_ENCODE_SECRET[i % API_KEY_ENCODE_SECRET.length]);
-        }
-        return Base64.getEncoder().encodeToString(encodedBytes);
-    }
-
-    private String maskApiKey(String apiKey) {
-        String trimmed = apiKey.trim();
-        if (trimmed.length() >= 7 && trimmed.startsWith("sk-")) {
-            return "sk-****" + trimmed.substring(trimmed.length() - 4);
-        }
-        if (trimmed.length() >= 4) {
-            return "****" + trimmed.substring(trimmed.length() - 2);
-        }
-        return "****";
-    }
 }

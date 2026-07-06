@@ -14,3 +14,14 @@ mybatis:
   mapper-locations: classpath:mapper/*.xml
   configuration:
     map-underscore-to-camel-case: true
+
+ai:
+  default-model:
+    enabled: ${AI_DEFAULT_ENABLED:true}
+    provider: ${AI_DEFAULT_PROVIDER:qwen}
+    base-url: ${AI_DEFAULT_BASE_URL:https://llm-dujne1fkrf6fj1k5.cn-beijing.maas.aliyuncs.com/compatible-mode/v1}
+    model-name: ${AI_DEFAULT_MODEL_NAME:qwen3.6-flash}
+    api-key: ${AI_DEFAULT_API_KEY:}
+    timeout-ms: ${AI_DEFAULT_TIMEOUT_MS:10000}
+    max-tokens: ${AI_DEFAULT_MAX_TOKENS:800}
+    temperature: ${AI_DEFAULT_TEMPERATURE:0.20}
