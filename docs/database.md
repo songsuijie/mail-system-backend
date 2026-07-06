@@ -2,9 +2,9 @@
 
 ## 1. 文档定位
 
-本文档根据 `docs/api.md` 定义第一版邮件系统后端数据库结构，是编写 `sql/schema.sql`、Entity、Mapper、Service 和接口实现的依据。
+本文档根据 `docs/默认模块最终版.openapi.json` 定义第一版邮件系统后端数据库结构，是编写 SQL、Entity、Mapper、Service 和接口实现的依据。
 
-接口契约以 `docs/api.md` 为最高优先级。若字段命名、响应结构或业务规则存在冲突，以 `docs/api.md` 为准。
+接口契约以 `docs/默认模块最终版.openapi.json` 为最高优先级。若字段命名、响应结构或业务规则存在冲突，以最终 OpenAPI 为准。
 
 ## 2. 设计目标
 
@@ -19,12 +19,13 @@
 - 邮箱统计数量。
 - 搜索、过滤、优先级、垃圾等级、风险等级。
 - 邮件分析结果展示和后续重新分析。
+- 文件上传、文件下载和邮件附件。
 
-当前版本不接入真实 SMTP、POP3、IMAP，不设计附件表、多收件人详情表、草稿表或复杂文件夹表。
+当前版本不接入真实 SMTP、POP3、IMAP，不设计多收件人详情表、草稿表或复杂文件夹表。最终契约已包含单附件能力，因此数据库需要保留文件资源表和邮件附件关联字段。
 
 ## 3. 表结构总览
 
-`docs/api.md` 第 17 节使用 `user` 和 `mail` 作为实体名称。为了避免和 MySQL 系统用户概念混淆，并延续当前项目命名，实际建表使用以下表名：
+为了避免和 MySQL 系统用户概念混淆，并延续当前项目命名，实际建表使用以下表名：
 
 | API 实体 | 实际表名 | 说明 |
 | --- | --- | --- |
@@ -33,6 +34,7 @@
 | mail | `mail_message` | 邮件主体内容 |
 | mail_recipient | `mail_recipient` | 收件人个人状态 |
 | mail_analysis | `mail_analysis` | 规则、机器学习或 AI 分析结果 |
+| file | `file_resource` | 上传文件和附件下载资源 |
 
 ## 4. 表关系
 
@@ -46,6 +48,8 @@ mail_message 1 ---- N mail_recipient
 sys_user 1 ---- N mail_recipient
 
 mail_recipient 1 ---- 0/1 mail_analysis
+
+mail_message 0/1 ---- 1 file_resource
 ```
 
 第一版只发送给一个普通收件人，但仍保留 `mail_recipient` 关系表，方便后续扩展多收件人、CC 和 BCC。
@@ -121,9 +125,12 @@ mail_recipient 1 ---- 0/1 mail_analysis
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
 | `id` | `BIGINT` | 邮件 ID，对应 API 的 `mailId` |
+| `thread_id` | `BIGINT` | 邮件线程 ID，对应 API 的 `threadId` |
+| `reply_to_mail_id` | `BIGINT` | 当前邮件回复的上一封邮件 ID，根邮件为空 |
 | `sender_id` | `BIGINT` | 发件人用户 ID |
 | `subject` | `VARCHAR(200)` | 邮件主题 |
 | `content` | `MEDIUMTEXT` | 邮件正文，保存 `RichTextNode[]` 富文本数组的 JSON 字符串 |
+| `attachment_file_id` | `VARCHAR(64)` | 关联上传文件 ID，无附件时为空 |
 | `sent_at` | `DATETIME` | 发送时间，对应 API 的 `sentAt` |
 | `status` | `TINYINT` | 邮件状态，当前 `1` 表示已发送 |
 | `sender_deleted` | `TINYINT` | 发件人侧删除预留字段 |
@@ -133,6 +140,8 @@ mail_recipient 1 ---- 0/1 mail_analysis
 业务规则：
 
 - 发送邮件时写入 `mail_message` 后，再写入 `mail_recipient`。
+- 新邮件默认 `thread_id = id`，回复邮件沿用原线程 ID，并写入 `reply_to_mail_id`。
+- 有附件时，`attachment_file_id` 保存 `POST /api/files` 返回的 `fileId`。
 - 已发送列表按 `sender_id` 查询，并按 `sent_at` 倒序。
 - 当前 API 不开放发件人删除，`sender_deleted` 仅预留。
 
@@ -209,6 +218,38 @@ mail_recipient 1 ---- 0/1 mail_analysis
 - 列表页只返回展示和筛选所需的分析字段。
 - 详情页返回完整 `analysis` 对象。
 - `priority_score`、`spam_score`、`risk_score`、`ai_provider`、`model_name` 为内部计算、排序或排错字段，当前最终版接口层不返回。
+
+### 5.6 `file_resource`
+
+用途：
+
+保存上传文件的元数据，用于邮件附件关联和下载权限校验。
+
+核心字段：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | `BIGINT` | 主键 |
+| `file_id` | `VARCHAR(64)` | 对外暴露的文件 ID，对应 API 的 `fileId` |
+| `uploader_id` | `BIGINT` | 上传者用户 ID |
+| `mail_id` | `BIGINT` | 关联邮件 ID，发送邮件前上传时可为空 |
+| `original_filename` | `VARCHAR(255)` | 原始文件名 |
+| `stored_filename` | `VARCHAR(255)` | 服务端保存文件名 |
+| `storage_path` | `VARCHAR(500)` | 服务端存储路径 |
+| `content_type` | `VARCHAR(128)` | 文件 MIME 类型 |
+| `file_ext` | `VARCHAR(16)` | 文件扩展名 |
+| `file_size` | `BIGINT` | 文件大小，单位字节 |
+| `status` | `VARCHAR(20)` | 文件状态，当前默认 `UPLOADED` |
+| `created_at` | `DATETIME` | 创建时间 |
+| `updated_at` | `DATETIME` | 更新时间 |
+
+业务规则：
+
+- 上传接口 `POST /api/files` 使用 `multipart/form-data`，字段名为 `file`。
+- 上传成功返回 `fileId`，发送邮件时通过 `attachmentFileId` 引用。
+- 下载接口 `GET /api/files/{fileId}/download` 返回文件流。
+- 下载权限应限制为上传者、邮件发件人或邮件收件人。
+- 当前版本只保留单附件能力，不做附件预览和多附件列表。
 
 ## 6. 枚举约定
 
@@ -306,8 +347,12 @@ OR mail_recipient.recipient_id = current_user_id
 | `nickname` | `sys_user.nickname` |
 | `emailAddress` | `sys_user.email_address` |
 | `mailId` | `mail_message.id` |
+| `threadId` | `mail_message.thread_id` |
+| `replyToMailId` | `mail_message.reply_to_mail_id` |
 | `subject` | `mail_message.subject` |
 | `content` | `mail_message.content` |
+| `attachmentFileId` | `mail_message.attachment_file_id` |
+| `attachment` | `mail_message.attachment_file_id -> file_resource` |
 | `sentAt` | `mail_message.sent_at` |
 | `sender` | `mail_message.sender_id -> sys_user` |
 | `recipient` | `mail_recipient.recipient_id -> sys_user` |
@@ -330,11 +375,17 @@ OR mail_recipient.recipient_id = current_user_id
 sql/schema.sql
 ```
 
+最终契约补充迁移脚本维护在：
+
+```text
+sql/final-contract-supplement.sql
+```
+
 初始测试数据维护在：
 
 ```text
 sql/init-data.sql
 ```
 
-当前建表脚本用于开发环境重建表结构，会删除并重建核心表。执行前应确认本地数据可以被清空。建表完成后可按需执行初始数据脚本导入测试账号和默认用户设置。
+当前 `schema.sql` 用于开发环境重建表结构，会删除并重建核心表。执行前应确认本地数据可以被清空。执行 `schema.sql` 后，需要执行 `final-contract-supplement.sql` 补齐线程、回复和附件相关字段，再按需执行初始数据脚本导入测试账号和默认用户设置。
 

@@ -160,8 +160,8 @@ fix bug
 
 - 一个提交只解决一个明确问题
 - 功能代码和大规模文档修改尽量分开提交
-- 数据库结构变化应同时提交 `docs/database.md` 和 `sql/schema.sql`
-- API 变化应同时提交 `docs/api.md`
+- 数据库结构变化应同时提交 `docs/database.md`、`sql/schema.sql` 或对应迁移脚本
+- API 变化应优先同步 `docs/默认模块最终版.openapi.json`，必要时再同步 `docs/api.md`
 - 不把格式化整个项目和业务逻辑修改混在一个提交里
 
 ## 7. 合并前检查
@@ -172,8 +172,8 @@ fix bug
 2. `git diff` 检查改动范围符合任务目标
 3. 项目可以正常编译
 4. 相关接口可以通过 Apifox 或类似工具测试
-5. API 变化已更新 `docs/api.md`
-6. 数据库变化已更新 `docs/database.md` 和 `sql/schema.sql`
+5. API 变化已更新 `docs/默认模块最终版.openapi.json`
+6. 数据库变化已更新 `docs/database.md` 和 `sql/schema.sql` 或对应迁移脚本
 7. 没有提交 `target/`、日志、私有配置、临时文件
 
 ## 8. 文档同步规则
@@ -182,10 +182,10 @@ fix bug
 
 | 变更内容 | 必须更新 |
 | --- | --- |
-| 新增或修改接口路径 | `docs/api.md` |
-| 修改请求参数或响应字段 | `docs/api.md` |
-| 修改错误码或鉴权规则 | `docs/api.md` |
-| 新增、删除、修改数据库字段 | `docs/database.md`、`sql/schema.sql` |
+| 新增或修改接口路径 | `docs/默认模块最终版.openapi.json`，必要时同步 `docs/api.md` |
+| 修改请求参数或响应字段 | `docs/默认模块最终版.openapi.json`，必要时同步 `docs/api.md` |
+| 修改错误码或鉴权规则 | `docs/默认模块最终版.openapi.json`，必要时同步 `docs/api.md` |
+| 新增、删除、修改数据库字段 | `docs/database.md`、`sql/schema.sql` 或对应迁移脚本 |
 | 修改 MVP 功能范围 | `docs/mvp.md` |
 | 修改启动方式或环境变量 | `README.md` |
 | 修改协作流程 | `docs/git-workflow.md` |

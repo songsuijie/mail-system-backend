@@ -4,13 +4,13 @@
 
 本文档面向前端联调和项目演示，说明第一版邮件系统需要支持的页面、用户流程、交互规则和接口范围。
 
-接口路径、请求字段、响应字段、错误码、枚举值和分页格式以 `docs/api.md` 为最高优先级。本文档只做产品和页面层说明。
+接口路径、请求字段、响应字段、错误码、枚举值和分页格式以 `docs/默认模块最终版.openapi.json` 为最高优先级。本文档只做产品和页面层说明。
 
 ## 2. 产品定位
 
 本项目是课程实训中的站内邮件系统后端。用户在同一个系统内注册、登录，并通过用户名向其他已存在用户发送邮件。
 
-当前版本不接入真实 SMTP、POP3、IMAP，不做附件、多收件人、CC、BCC、草稿、邮件撤回和 WebSocket 通知。
+当前版本不接入真实 SMTP、POP3、IMAP。最终契约已包含文件上传、文件下载和单附件邮件能力；多收件人、CC、BCC、草稿、邮件撤回和 WebSocket 通知仍不做。
 
 接口文档已为搜索过滤、垃圾邮箱、已删除列表、用户设置、统计数量和 AI 分析结果预留接口。开发时按 P0、P1、P2 分阶段完成。
 
@@ -99,7 +99,7 @@ GET /api/mails/statistics
 需要接口：
 
 ```http
-GET /api/mails/inbox
+GET /api/threads
 ```
 
 P0 展示：
@@ -124,7 +124,7 @@ P1 展示：
 
 交互规则：
 
-- 点击列表项进入邮件详情页。
+- 点击列表项进入邮件线程详情页。
 - 未读邮件需要有明显视觉区分。
 - 已删除邮件和垃圾邮件不出现在普通收件箱。
 
@@ -173,41 +173,66 @@ P1 查询参数：
 需要接口：
 
 ```http
-POST /api/mails
+POST /api/emails/send
 ```
 
 说明：
 
-- `POST /api/mails` 属于 P0。
-- 当前最终版不提供 `/api/users/search`，前端直接输入收件人的 `recipientUsername`。
+- `POST /api/emails/send` 属于 P0。
+- 当前最终版不提供 `/api/users/search`，前端直接输入收件人的用户名。
+- 如需发送附件，应先调用 `POST /api/files` 上传文件，再把返回的 `fileId` 作为 `attachmentFileId` 传入发送接口。
 
 表单字段：
 
 | 字段 | 必填 | 说明 |
 | --- | --- | --- |
-| recipientUsername | 是 | 收件人的系统用户名 |
+| to | 是 | 收件人的系统用户名 |
 | subject | 是 | 邮件主题 |
-| content | 是 | 邮件正文 |
+| content | 是 | 邮件正文，`RichTextNode[]` |
+| attachmentFileId | 否 | 已上传附件的文件 ID |
 
 交互规则：
 
 - 提交前校验收件人、主题、正文不能为空。
 - 收件人不存在时展示后端错误。
 - 发送成功后可跳转到已发送页，也可清空表单继续写信。
-- 当前版本不展示附件、CC、BCC、多收件人入口。
+- 当前版本可以展示单附件入口，不展示 CC、BCC、多收件人入口。
 
-### 4.6 邮件详情页
+### 4.6 邮件回复
 
-建议路由：
+建议入口：
 
 ```text
-/mails/:mailId
+/threads/:threadId
 ```
 
 需要接口：
 
 ```http
-GET /api/mails/{mailId}
+POST /api/emails/reply
+```
+
+请求字段：
+
+| 字段 | 必填 | 说明 |
+| --- | --- | --- |
+| mailId | 是 | 被回复的原邮件 ID |
+| threadId | 是 | 所属线程 ID |
+| subject | 否 | 回复主题 |
+| content | 是 | 回复正文，`RichTextNode[]` |
+
+### 4.7 邮件详情页
+
+建议路由：
+
+```text
+/threads/:threadId
+```
+
+需要接口：
+
+```http
+GET /api/threads/{threadId}
 PATCH /api/mails/{mailId}/read
 DELETE /api/mails/{mailId}
 ```
@@ -234,7 +259,7 @@ DELETE /api/mails/{mailId}
 - 只有收件人显示删除操作。
 - 删除成功后邮件进入已删除列表，并从普通收件箱和垃圾邮箱移除。
 
-### 4.7 已删除页
+### 4.8 已删除页
 
 建议路由：
 
@@ -255,7 +280,7 @@ GET /api/mails/trash
 - 已删除页只展示当前用户删除过的收件邮件。
 - 恢复邮件接口 `PATCH /api/mails/{mailId}/restore` 属于 P2，不强制第一阶段实现。
 
-### 4.8 垃圾邮箱页
+### 4.9 垃圾邮箱页
 
 建议路由：
 
@@ -276,7 +301,7 @@ GET /api/mails/spam
 - 垃圾邮箱需要展示风险等级、垃圾等级和风险原因。
 - 当前版本不强制支持“移出垃圾邮箱”。
 
-### 4.9 设置页
+### 4.10 设置页
 
 建议路由：
 
@@ -299,7 +324,24 @@ PUT /api/users/settings
 - 用户未配置模型时，`modelConfigured` 应为 `false`。
 - 模型调用失败不能影响邮件主流程。
 
-### 4.10 修改密码弹窗
+### 4.11 文件上传和下载
+
+需要接口：
+
+```http
+POST /api/files
+GET /api/files/{fileId}/download
+```
+
+说明：
+
+- 文件能力属于 P1，最终契约要求保留。
+- 上传接口使用 `multipart/form-data`，字段名为 `file`。
+- 上传成功返回 `fileId`。
+- 下载接口返回文件流，成功响应为 `application/octet-stream` 或实际文件类型，并带 `Content-Disposition`。
+- 下载权限由后端控制：上传者、邮件发件人或邮件收件人可下载相关附件。
+
+### 4.12 修改密码弹窗
 
 需要接口：
 
@@ -387,8 +429,10 @@ page=1&size=10
 | 用户 | PUT | `/api/users/password` | P2 |
 | 设置 | GET | `/api/users/settings` | P1 |
 | 设置 | PUT | `/api/users/settings` | P1 |
-| 邮件 | POST | `/api/mails` | P0 |
-| 邮件 | GET | `/api/mails/inbox` | P0/P1 |
+| 邮件 | POST | `/api/emails/send` | P0 |
+| 邮件 | POST | `/api/emails/reply` | P0 |
+| 邮件线程 | GET | `/api/threads` | P0/P1 |
+| 邮件线程 | GET | `/api/threads/{threadId}` | P0/P1 |
 | 邮件 | GET | `/api/mails/sent` | P0/P1 |
 | 邮件 | GET | `/api/mails/trash` | P1 |
 | 邮件 | GET | `/api/mails/spam` | P1 |
@@ -398,6 +442,8 @@ page=1&size=10
 | 邮件状态 | PATCH | `/api/mails/{mailId}/restore` | P2 |
 | 统计 | GET | `/api/mails/statistics` | P1 |
 | AI | POST | `/api/mails/{mailId}/analysis/retry` | P2 |
+| 文件 | POST | `/api/files` | P1 |
+| 文件 | GET | `/api/files/{fileId}/download` | P1 |
 | 健康检查 | GET | `/api/health` | 已有接口 |
 
 ## 7. 推荐联调流程
@@ -410,8 +456,8 @@ P0：
 4. `alice` 给 `bob` 发送邮件。
 5. `alice` 查看已发送。
 6. `bob` 登录。
-7. `bob` 查看收件箱。
-8. `bob` 查看邮件详情，详情接口自动标记已读。
+7. `bob` 查看收件箱线程列表。
+8. `bob` 查看线程详情，详情接口自动标记已读。
 9. 第三个用户尝试查看该邮件详情，返回无权限。
 10. `bob` 调用标记已读接口。
 11. `bob` 删除邮件。
@@ -424,11 +470,12 @@ P1：
 3. 测试收件箱搜索、未读筛选和优先级筛选。
 4. 测试垃圾邮箱列表。
 5. 测试用户设置读取和更新。
+6. 测试上传文件、带附件发送邮件、下载附件。
 
 ## 8. 当前不做
 
 - SMTP、POP3、IMAP 接入。
-- 附件上传、下载、预览。
+- 附件预览。
 - 多收件人、CC、BCC。
 - 草稿箱。
 - 邮件撤回。
