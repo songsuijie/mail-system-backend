@@ -183,8 +183,27 @@
     <select id="countSent" resultType="long">
         SELECT COUNT(1)
         FROM mail_message m
+        INNER JOIN mail_recipient r ON r.mail_id = m.id
+        INNER JOIN sys_user recipient ON recipient.id = r.recipient_id
         WHERE m.sender_id = #{userId}
           AND m.sender_deleted = 0
+        <if test="keyword != null">
+          AND (
+            m.subject LIKE CONCAT('%', #{keyword}, '%')
+            OR m.content LIKE CONCAT('%', #{keyword}, '%')
+            OR recipient.username LIKE CONCAT('%', #{keyword}, '%')
+            OR recipient.nickname LIKE CONCAT('%', #{keyword}, '%')
+          )
+        </if>
+        <if test="recipientUsername != null">
+          AND recipient.username = #{recipientUsername}
+        </if>
+        <if test="startTime != null">
+          AND m.sent_at &gt;= #{startTime}
+        </if>
+        <if test="endTime != null">
+          AND m.sent_at &lt;= #{endTime}
+        </if>
     </select>
 
     <select id="selectSentPage" resultMap="MailListItemRowResultMap">
@@ -215,6 +234,23 @@
         LEFT JOIN mail_analysis a ON a.mail_id = m.id AND a.recipient_id = r.recipient_id
         WHERE m.sender_id = #{userId}
           AND m.sender_deleted = 0
+        <if test="keyword != null">
+          AND (
+            m.subject LIKE CONCAT('%', #{keyword}, '%')
+            OR m.content LIKE CONCAT('%', #{keyword}, '%')
+            OR recipient.username LIKE CONCAT('%', #{keyword}, '%')
+            OR recipient.nickname LIKE CONCAT('%', #{keyword}, '%')
+          )
+        </if>
+        <if test="recipientUsername != null">
+          AND recipient.username = #{recipientUsername}
+        </if>
+        <if test="startTime != null">
+          AND m.sent_at &gt;= #{startTime}
+        </if>
+        <if test="endTime != null">
+          AND m.sent_at &lt;= #{endTime}
+        </if>
         ORDER BY m.sent_at DESC
         LIMIT #{size} OFFSET #{offset}
     </select>
@@ -292,15 +328,31 @@
         SELECT COUNT(1)
         FROM mail_message m
         INNER JOIN mail_recipient r ON r.mail_id = m.id
+        INNER JOIN sys_user sender ON sender.id = m.sender_id
         LEFT JOIN mail_analysis a ON a.mail_id = m.id AND a.recipient_id = r.recipient_id
         WHERE r.recipient_id = #{userId}
           AND r.deleted_flag = 0
           AND (COALESCE(a.spam_flag, r.spam_flag, 0) = 1 OR COALESCE(a.risk_level, r.risk_level, 'SAFE') IN ('MEDIUM', 'HIGH'))
+        <if test="keyword != null">
+          AND (
+            m.subject LIKE CONCAT('%', #{keyword}, '%')
+            OR m.content LIKE CONCAT('%', #{keyword}, '%')
+            OR sender.username LIKE CONCAT('%', #{keyword}, '%')
+            OR sender.nickname LIKE CONCAT('%', #{keyword}, '%')
+            OR a.risk_reason LIKE CONCAT('%', #{keyword}, '%')
+          )
+        </if>
         <if test="spamLevel != null">
           AND COALESCE(a.spam_level, r.spam_level, 'NONE') = #{spamLevel}
         </if>
         <if test="riskLevel != null">
           AND COALESCE(a.risk_level, r.risk_level, 'SAFE') = #{riskLevel}
+        </if>
+        <if test="startTime != null">
+          AND m.sent_at &gt;= #{startTime}
+        </if>
+        <if test="endTime != null">
+          AND m.sent_at &lt;= #{endTime}
         </if>
     </select>
 
@@ -333,11 +385,26 @@
         WHERE r.recipient_id = #{userId}
           AND r.deleted_flag = 0
           AND (COALESCE(a.spam_flag, r.spam_flag, 0) = 1 OR COALESCE(a.risk_level, r.risk_level, 'SAFE') IN ('MEDIUM', 'HIGH'))
+        <if test="keyword != null">
+          AND (
+            m.subject LIKE CONCAT('%', #{keyword}, '%')
+            OR m.content LIKE CONCAT('%', #{keyword}, '%')
+            OR sender.username LIKE CONCAT('%', #{keyword}, '%')
+            OR sender.nickname LIKE CONCAT('%', #{keyword}, '%')
+            OR a.risk_reason LIKE CONCAT('%', #{keyword}, '%')
+          )
+        </if>
         <if test="spamLevel != null">
           AND COALESCE(a.spam_level, r.spam_level, 'NONE') = #{spamLevel}
         </if>
         <if test="riskLevel != null">
           AND COALESCE(a.risk_level, r.risk_level, 'SAFE') = #{riskLevel}
+        </if>
+        <if test="startTime != null">
+          AND m.sent_at &gt;= #{startTime}
+        </if>
+        <if test="endTime != null">
+          AND m.sent_at &lt;= #{endTime}
         </if>
         ORDER BY m.sent_at DESC
         LIMIT #{size} OFFSET #{offset}

@@ -56,8 +56,20 @@ public class MailController {
     public ApiResponse<PageResult<MailListItemVO>> getSent(
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
             @RequestParam(value = "page", required = false) Integer page,
-            @RequestParam(value = "size", required = false) Integer size) {
-        return ApiResponse.success(mailService.getSent(authorizationHeader, page, size));
+            @RequestParam(value = "size", required = false) Integer size,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "recipientUsername", required = false) String recipientUsername,
+            @RequestParam(value = "startTime", required = false) String startTime,
+            @RequestParam(value = "endTime", required = false) String endTime) {
+        return ApiResponse.success(mailService.getSent(
+                authorizationHeader,
+                page,
+                size,
+                keyword,
+                recipientUsername,
+                startTime,
+                endTime
+        ));
     }
 
     @GetMapping("/trash")
@@ -76,9 +88,21 @@ public class MailController {
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
             @RequestParam(value = "page", required = false) Integer page,
             @RequestParam(value = "size", required = false) Integer size,
+            @RequestParam(value = "keyword", required = false) String keyword,
             @RequestParam(value = "spamLevel", required = false) String spamLevel,
-            @RequestParam(value = "riskLevel", required = false) String riskLevel) {
-        return ApiResponse.success(mailService.getSpam(authorizationHeader, page, size, spamLevel, riskLevel));
+            @RequestParam(value = "riskLevel", required = false) String riskLevel,
+            @RequestParam(value = "startTime", required = false) String startTime,
+            @RequestParam(value = "endTime", required = false) String endTime) {
+        return ApiResponse.success(mailService.getSpam(
+                authorizationHeader,
+                page,
+                size,
+                keyword,
+                spamLevel,
+                riskLevel,
+                startTime,
+                endTime
+        ));
     }
 
     @GetMapping("/statistics")

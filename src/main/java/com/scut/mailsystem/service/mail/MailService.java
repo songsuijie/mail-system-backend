@@ -26,7 +26,13 @@ public interface MailService {
 
     PageResult<MailListItemVO> getInbox(String authorizationHeader, Integer page, Integer size);
 
-    PageResult<MailListItemVO> getSent(String authorizationHeader, Integer page, Integer size);
+    PageResult<MailListItemVO> getSent(String authorizationHeader,
+                                       Integer page,
+                                       Integer size,
+                                       String keyword,
+                                       String recipientUsername,
+                                       String startTime,
+                                       String endTime);
 
     MailDetailVO getMailDetail(String authorizationHeader, Long mailId);
 
@@ -44,8 +50,11 @@ public interface MailService {
     PageResult<MailListItemVO> getSpam(String authorizationHeader,
                                        Integer page,
                                        Integer size,
+                                       String keyword,
                                        String spamLevel,
-                                       String riskLevel);
+                                       String riskLevel,
+                                       String startTime,
+                                       String endTime);
 
     MailStatisticsVO getStatistics(String authorizationHeader);
 

@@ -264,11 +264,11 @@ class MailServiceImplTest {
     void getSpam_returnsSpamOrRiskMailsWithRiskReason() {
         SysUser bob = activeUser(2L, "bob", "Bob");
         when(sysUserMapper.selectActiveById(2L)).thenReturn(bob);
-        when(mailMessageMapper.countSpam(2L, "HIGH", "HIGH")).thenReturn(1L);
-        when(mailMessageMapper.selectSpamPage(2L, "HIGH", "HIGH", 0, 10))
+        when(mailMessageMapper.countSpam(2L, null, "HIGH", "HIGH", null, null)).thenReturn(1L);
+        when(mailMessageMapper.selectSpamPage(2L, null, "HIGH", "HIGH", null, null, 0, 10))
                 .thenReturn(List.of(mailListItemRow(1004L, 2003L, null, 0, 0, 1)));
 
-        var page = mailService.getSpam(authHeader(2L, "bob"), 1, 10, "HIGH", "HIGH");
+        var page = mailService.getSpam(authHeader(2L, "bob"), 1, 10, null, "HIGH", "HIGH", null, null);
 
         assertEquals(1L, page.getTotal());
         assertTrue(page.getRecords().get(0).getSpam());
@@ -278,14 +278,91 @@ class MailServiceImplTest {
     }
 
     @Test
+    void getSent_passesKeywordRecipientAndTimeFiltersToMapper() {
+        SysUser alice = activeUser(1L, "alice", "Alice");
+        when(sysUserMapper.selectActiveById(1L)).thenReturn(alice);
+        when(mailMessageMapper.countSent(
+                1L,
+                "report",
+                "bob",
+                "2026-05-01T00:00:00",
+                "2026-05-31T23:59:59"
+        )).thenReturn(1L);
+        when(mailMessageMapper.selectSentPage(
+                1L,
+                "report",
+                "bob",
+                "2026-05-01T00:00:00",
+                "2026-05-31T23:59:59",
+                20,
+                20
+        )).thenReturn(List.of(mailListItemRow(1005L, 2004L, null, 1, 0, 0)));
+
+        var page = mailService.getSent(
+                authHeader(1L, "alice"),
+                2,
+                20,
+                " report ",
+                " bob ",
+                "2026-05-01T00:00:00",
+                "2026-05-31T23:59:59"
+        );
+
+        assertEquals(2, page.getPage());
+        assertEquals(20, page.getSize());
+        assertEquals(1L, page.getTotal());
+        assertNull(page.getRecords().get(0).getRead());
+        assertEquals(1005L, page.getRecords().get(0).getMailId());
+    }
+
+    @Test
+    void getSpam_passesKeywordLevelAndTimeFiltersToMapper() {
+        SysUser bob = activeUser(2L, "bob", "Bob");
+        when(sysUserMapper.selectActiveById(2L)).thenReturn(bob);
+        when(mailMessageMapper.countSpam(
+                2L,
+                "gift",
+                "HIGH",
+                "MEDIUM",
+                "2026-05-01T00:00:00",
+                "2026-05-31T23:59:59"
+        )).thenReturn(1L);
+        when(mailMessageMapper.selectSpamPage(
+                2L,
+                "gift",
+                "HIGH",
+                "MEDIUM",
+                "2026-05-01T00:00:00",
+                "2026-05-31T23:59:59",
+                0,
+                10
+        )).thenReturn(List.of(mailListItemRow(1006L, 2005L, null, 0, 0, 1)));
+
+        var page = mailService.getSpam(
+                authHeader(2L, "bob"),
+                1,
+                10,
+                " gift ",
+                " HIGH ",
+                " MEDIUM ",
+                "2026-05-01T00:00:00",
+                "2026-05-31T23:59:59"
+        );
+
+        assertEquals(1L, page.getTotal());
+        assertEquals(1006L, page.getRecords().get(0).getMailId());
+        assertTrue(page.getRecords().get(0).getSpam());
+    }
+
+    @Test
     void getStatisticsAndRestoreMail_returnCurrentUserMailboxState() {
         SysUser bob = activeUser(2L, "bob", "Bob");
         when(sysUserMapper.selectActiveById(2L)).thenReturn(bob);
         when(mailMessageMapper.countInbox(2L)).thenReturn(4L);
         when(mailMessageMapper.countInboxUnread(2L)).thenReturn(2L);
-        when(mailMessageMapper.countSent(2L)).thenReturn(3L);
+        when(mailMessageMapper.countSent(2L, null, null, null, null)).thenReturn(3L);
         when(mailMessageMapper.countTrash(2L, null, null, null)).thenReturn(1L);
-        when(mailMessageMapper.countSpam(2L, null, null)).thenReturn(2L);
+        when(mailMessageMapper.countSpam(2L, null, null, null, null, null)).thenReturn(2L);
         when(mailMessageMapper.selectDetailByMailId(1003L)).thenReturn(detailRow(1003L, 1L, 2L, 1, 1));
         when(mailRecipientMapper.restoreRecipientMailIfDeleted(1003L, 2L)).thenReturn(1);
 

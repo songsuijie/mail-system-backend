@@ -25,9 +25,17 @@ public interface MailMessageMapper {
                                           @Param("offset") Integer offset,
                                           @Param("size") Integer size);
 
-    long countSent(@Param("userId") Long userId);
+    long countSent(@Param("userId") Long userId,
+                   @Param("keyword") String keyword,
+                   @Param("recipientUsername") String recipientUsername,
+                   @Param("startTime") String startTime,
+                   @Param("endTime") String endTime);
 
     List<MailListItemRow> selectSentPage(@Param("userId") Long userId,
+                                         @Param("keyword") String keyword,
+                                         @Param("recipientUsername") String recipientUsername,
+                                         @Param("startTime") String startTime,
+                                         @Param("endTime") String endTime,
                                          @Param("offset") Integer offset,
                                          @Param("size") Integer size);
 
@@ -44,12 +52,18 @@ public interface MailMessageMapper {
                                           @Param("size") Integer size);
 
     long countSpam(@Param("userId") Long userId,
+                   @Param("keyword") String keyword,
                    @Param("spamLevel") String spamLevel,
-                   @Param("riskLevel") String riskLevel);
+                   @Param("riskLevel") String riskLevel,
+                   @Param("startTime") String startTime,
+                   @Param("endTime") String endTime);
 
     List<MailListItemRow> selectSpamPage(@Param("userId") Long userId,
+                                         @Param("keyword") String keyword,
                                          @Param("spamLevel") String spamLevel,
                                          @Param("riskLevel") String riskLevel,
+                                         @Param("startTime") String startTime,
+                                         @Param("endTime") String endTime,
                                          @Param("offset") Integer offset,
                                          @Param("size") Integer size);
 

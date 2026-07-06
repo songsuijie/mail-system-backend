@@ -277,15 +277,35 @@ public class MailServiceImpl implements MailService {
     }
 
     @Override
-    public PageResult<MailListItemVO> getSent(String authorizationHeader, Integer page, Integer size) {
+    public PageResult<MailListItemVO> getSent(String authorizationHeader,
+                                              Integer page,
+                                              Integer size,
+                                              String keyword,
+                                              String recipientUsername,
+                                              String startTime,
+                                              String endTime) {
         SysUser currentUser = getCurrentActiveUser(authorizationHeader);
         PageQuery pageQuery = normalizePageQuery(page, size);
+        String normalizedKeyword = trimToNull(keyword);
+        String normalizedRecipientUsername = trimToNull(recipientUsername);
+        String normalizedStartTime = trimToNull(startTime);
+        String normalizedEndTime = trimToNull(endTime);
 
-        long total = mailMessageMapper.countSent(currentUser.getId());
+        long total = mailMessageMapper.countSent(
+                currentUser.getId(),
+                normalizedKeyword,
+                normalizedRecipientUsername,
+                normalizedStartTime,
+                normalizedEndTime
+        );
         List<MailListItemVO> records = new ArrayList<>();
         if (total > 0) {
             List<MailListItemRow> rows = mailMessageMapper.selectSentPage(
                     currentUser.getId(),
+                    normalizedKeyword,
+                    normalizedRecipientUsername,
+                    normalizedStartTime,
+                    normalizedEndTime,
                     pageQuery.offset(),
                     pageQuery.size()
             );
@@ -390,20 +410,36 @@ public class MailServiceImpl implements MailService {
     public PageResult<MailListItemVO> getSpam(String authorizationHeader,
                                               Integer page,
                                               Integer size,
+                                              String keyword,
                                               String spamLevel,
-                                              String riskLevel) {
+                                              String riskLevel,
+                                              String startTime,
+                                              String endTime) {
         SysUser currentUser = getCurrentActiveUser(authorizationHeader);
         PageQuery pageQuery = normalizePageQuery(page, size);
+        String normalizedKeyword = trimToNull(keyword);
         String normalizedSpamLevel = trimToNull(spamLevel);
         String normalizedRiskLevel = trimToNull(riskLevel);
+        String normalizedStartTime = trimToNull(startTime);
+        String normalizedEndTime = trimToNull(endTime);
 
-        long total = mailMessageMapper.countSpam(currentUser.getId(), normalizedSpamLevel, normalizedRiskLevel);
+        long total = mailMessageMapper.countSpam(
+                currentUser.getId(),
+                normalizedKeyword,
+                normalizedSpamLevel,
+                normalizedRiskLevel,
+                normalizedStartTime,
+                normalizedEndTime
+        );
         List<MailListItemVO> records = new ArrayList<>();
         if (total > 0) {
             records = toMailListItemVOList(mailMessageMapper.selectSpamPage(
                     currentUser.getId(),
+                    normalizedKeyword,
                     normalizedSpamLevel,
                     normalizedRiskLevel,
+                    normalizedStartTime,
+                    normalizedEndTime,
                     pageQuery.offset(),
                     pageQuery.size()
             ), false);
@@ -417,9 +453,9 @@ public class MailServiceImpl implements MailService {
         MailStatisticsVO statistics = new MailStatisticsVO();
         statistics.setInboxTotal(toInt(mailMessageMapper.countInbox(currentUser.getId())));
         statistics.setInboxUnread(toInt(mailMessageMapper.countInboxUnread(currentUser.getId())));
-        statistics.setSentTotal(toInt(mailMessageMapper.countSent(currentUser.getId())));
+        statistics.setSentTotal(toInt(mailMessageMapper.countSent(currentUser.getId(), null, null, null, null)));
         statistics.setTrashTotal(toInt(mailMessageMapper.countTrash(currentUser.getId(), null, null, null)));
-        statistics.setSpamTotal(toInt(mailMessageMapper.countSpam(currentUser.getId(), null, null)));
+        statistics.setSpamTotal(toInt(mailMessageMapper.countSpam(currentUser.getId(), null, null, null, null, null)));
         return statistics;
     }
 
