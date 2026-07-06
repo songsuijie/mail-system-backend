@@ -259,6 +259,13 @@ class MailServiceImplTest {
         assertNotNull(detail.getMails().get(0).getAttachment());
         assertEquals(1002L, detail.getMails().get(1).getMailId());
         assertEquals(1001L, detail.getMails().get(1).getReplyToMailId());
+        assertNotNull(detail.getAnalysis());
+        assertEquals("SUCCESS", detail.getAnalysis().getAnalysisStatus());
+        assertEquals("收到，我会查看。", detail.getAnalysis().getSummary());
+        assertEquals("HIGH", detail.getAnalysis().getPriority());
+        assertEquals("高优先级", detail.getAnalysis().getPriorityLabel());
+        assertEquals("SAFE", detail.getAnalysis().getRiskLevel());
+        assertEquals(List.of("好的，我会尽快处理。"), detail.getAnalysis().getReplySuggestions());
         verify(mailRecipientMapper).markReadIfUnread(eq(1001L), eq(2L), any(LocalDateTime.class));
     }
 
@@ -711,6 +718,15 @@ class MailServiceImplTest {
         row.setAttachmentOriginalFilename(attachmentFileId == null ? null : "实验报告.pdf");
         row.setAttachmentContentType(attachmentFileId == null ? null : "application/pdf");
         row.setAttachmentFileSize(attachmentFileId == null ? null : 204800L);
+        row.setAnalysisStatus("SUCCESS");
+        row.setSummary(text);
+        row.setSpamLevel("NONE");
+        row.setSpamReason("未发现垃圾邮件特征。");
+        row.setRiskLevel("SAFE");
+        row.setRiskReason(null);
+        row.setPriority(mailId == 1002L ? "HIGH" : "MEDIUM");
+        row.setPriorityReason("回复需要尽快处理");
+        row.setReplySuggestions("[\"好的，我会尽快处理。\"]");
         return row;
     }
 

@@ -21,6 +21,16 @@ public class ThreadMailRow {
     private String attachmentOriginalFilename;
     private String attachmentContentType;
     private Long attachmentFileSize;
+    private Integer spamFlag;
+    private String analysisStatus;
+    private String summary;
+    private String spamLevel;
+    private String spamReason;
+    private String riskLevel;
+    private String riskReason;
+    private String priority;
+    private String priorityReason;
+    private String replySuggestions;
 
     public Long getMailId() {
         return mailId;
@@ -156,5 +166,85 @@ public class ThreadMailRow {
 
     public void setAttachmentFileSize(Long attachmentFileSize) {
         this.attachmentFileSize = attachmentFileSize;
+    }
+
+    public Integer getSpamFlag() {
+        return spamFlag;
+    }
+
+    public void setSpamFlag(Integer spamFlag) {
+        this.spamFlag = spamFlag;
+    }
+
+    public String getAnalysisStatus() {
+        return analysisStatus;
+    }
+
+    public void setAnalysisStatus(String analysisStatus) {
+        this.analysisStatus = analysisStatus;
+    }
+
+    public String getSummary() {
+        return summary;
+    }
+
+    public void setSummary(String summary) {
+        this.summary = summary;
+    }
+
+    public String getSpamLevel() {
+        return spamLevel;
+    }
+
+    public void setSpamLevel(String spamLevel) {
+        this.spamLevel = spamLevel;
+    }
+
+    public String getSpamReason() {
+        return spamReason;
+    }
+
+    public void setSpamReason(String spamReason) {
+        this.spamReason = spamReason;
+    }
+
+    public String getRiskLevel() {
+        return riskLevel;
+    }
+
+    public void setRiskLevel(String riskLevel) {
+        this.riskLevel = riskLevel;
+    }
+
+    public String getRiskReason() {
+        return riskReason;
+    }
+
+    public void setRiskReason(String riskReason) {
+        this.riskReason = riskReason;
+    }
+
+    public String getPriority() {
+        return priority;
+    }
+
+    public void setPriority(String priority) {
+        this.priority = priority;
+    }
+
+    public String getPriorityReason() {
+        return priorityReason;
+    }
+
+    public void setPriorityReason(String priorityReason) {
+        this.priorityReason = priorityReason;
+    }
+
+    public String getReplySuggestions() {
+        return replySuggestions;
+    }
+
+    public void setReplySuggestions(String replySuggestions) {
+        this.replySuggestions = replySuggestions;
     }
 }

@@ -2,6 +2,7 @@ package com.scut.mailsystem.controller.mail;
 
 import com.scut.mailsystem.common.PageResult;
 import com.scut.mailsystem.service.mail.MailService;
+import com.scut.mailsystem.vo.mail.MailAnalysisVO;
 import com.scut.mailsystem.vo.mail.ThreadDetailVO;
 import com.scut.mailsystem.vo.mail.ThreadListItemVO;
 import com.scut.mailsystem.vo.mail.ThreadReplyTextData;
@@ -78,6 +79,17 @@ class ThreadControllerTest {
         detail.setNextCursor(null);
         detail.setHasMore(false);
         detail.setMails(List.of());
+        MailAnalysisVO analysis = new MailAnalysisVO();
+        analysis.setAnalysisStatus("SUCCESS");
+        analysis.setSummary("线程最新邮件分析摘要");
+        analysis.setPriority("HIGH");
+        analysis.setPriorityLabel("高优先级");
+        analysis.setSpamLevel("NONE");
+        analysis.setSpamLevelLabel("非垃圾邮件");
+        analysis.setRiskLevel("SAFE");
+        analysis.setRiskLabel("安全");
+        analysis.setReplySuggestions(List.of("收到，我会尽快处理。"));
+        detail.setAnalysis(analysis);
         when(mailService.getThreadDetail("Bearer token", 2001L, "1001", 20)).thenReturn(detail);
 
         mockMvc.perform(get("/api/threads/2001")
@@ -90,7 +102,10 @@ class ThreadControllerTest {
                 .andExpect(jsonPath("$.data.subject").value("实验报告提交提醒"))
                 .andExpect(jsonPath("$.data.total").value(2))
                 .andExpect(jsonPath("$.data.limit").value(20))
-                .andExpect(jsonPath("$.data.hasMore").value(false));
+                .andExpect(jsonPath("$.data.hasMore").value(false))
+                .andExpect(jsonPath("$.data.analysis.analysisStatus").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.analysis.summary").value("线程最新邮件分析摘要"))
+                .andExpect(jsonPath("$.data.analysis.replySuggestions[0]").value("收到，我会尽快处理。"));
 
         verify(mailService).getThreadDetail("Bearer token", 2001L, "1001", 20);
     }

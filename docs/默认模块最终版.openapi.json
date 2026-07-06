@@ -4951,7 +4951,8 @@
           "limit",
           "nextCursor",
           "hasMore",
-          "mails"
+          "mails",
+          "analysis"
         ],
         "properties": {
           "threadId": {
@@ -4987,6 +4988,9 @@
             "items": {
               "$ref": "#/components/schemas/MailItemVO"
             }
+          },
+          "analysis": {
+            "$ref": "#/components/schemas/Analysis"
           }
         },
         "additionalProperties": false
@@ -4996,8 +5000,7 @@
         "required": [
           "code",
           "message",
-          "data",
-          "analysis"
+          "data"
         ],
         "properties": {
           "code": {
@@ -5011,10 +5014,6 @@
           },
           "data": {
             "$ref": "#/components/schemas/ThreadDetailVO"
-          },
-          "analysis": {
-            "$ref": "#/components/schemas/Analysis",
-            "nullable": true
           }
         }
       },

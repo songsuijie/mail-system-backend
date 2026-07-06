@@ -547,6 +547,7 @@ public class MailServiceImpl implements MailService {
         detail.setHasMore(hasMore);
         detail.setNextCursor(hasMore && !rows.isEmpty() ? String.valueOf(rows.get(rows.size() - 1).getMailId()) : null);
         detail.setMails(toMailItemVOList(rows));
+        detail.setAnalysis(toThreadAnalysisVO(rows));
         return detail;
     }
 
@@ -947,6 +948,49 @@ public class MailServiceImpl implements MailService {
         analysis.setPriorityReason(defaultIfBlank(row.getPriorityReason(), ""));
         analysis.setRiskReason(row.getRiskReason());
         analysis.setReplySuggestions(parseReplySuggestions(row.getReplySuggestions()));
+        return analysis;
+    }
+
+    private MailAnalysisVO toThreadAnalysisVO(List<ThreadMailRow> rows) {
+        if (rows == null || rows.isEmpty()) {
+            return defaultMailAnalysisVO();
+        }
+        ThreadMailRow latest = rows.get(rows.size() - 1);
+        String priority = defaultIfBlank(latest.getPriority(), PRIORITY_MEDIUM);
+        String riskLevel = defaultIfBlank(latest.getRiskLevel(), RISK_LEVEL_SAFE);
+        String spamLevel = defaultIfBlank(latest.getSpamLevel(), SPAM_LEVEL_NONE);
+        String analysisStatus = defaultIfBlank(latest.getAnalysisStatus(), ANALYSIS_STATUS_NOT_STARTED);
+
+        MailAnalysisVO analysis = new MailAnalysisVO();
+        analysis.setAnalysisStatus(analysisStatus);
+        analysis.setSummary(defaultIfBlank(latest.getSummary(), ""));
+        analysis.setSpamLevel(spamLevel);
+        analysis.setSpamLevelLabel(toSpamLevelLabel(spamLevel));
+        analysis.setSpamReason(defaultIfBlank(latest.getSpamReason(), ""));
+        analysis.setRiskLevel(riskLevel);
+        analysis.setRiskLabel(toRiskLabel(riskLevel));
+        analysis.setPriority(priority);
+        analysis.setPriorityLabel(toPriorityLabel(priority));
+        analysis.setPriorityReason(defaultIfBlank(latest.getPriorityReason(), ""));
+        analysis.setRiskReason(latest.getRiskReason());
+        analysis.setReplySuggestions(parseReplySuggestions(latest.getReplySuggestions()));
+        return analysis;
+    }
+
+    private MailAnalysisVO defaultMailAnalysisVO() {
+        MailAnalysisVO analysis = new MailAnalysisVO();
+        analysis.setAnalysisStatus(ANALYSIS_STATUS_NOT_STARTED);
+        analysis.setSummary("");
+        analysis.setSpamLevel(SPAM_LEVEL_NONE);
+        analysis.setSpamLevelLabel(toSpamLevelLabel(SPAM_LEVEL_NONE));
+        analysis.setSpamReason("");
+        analysis.setRiskLevel(RISK_LEVEL_SAFE);
+        analysis.setRiskLabel(toRiskLabel(RISK_LEVEL_SAFE));
+        analysis.setPriority(PRIORITY_MEDIUM);
+        analysis.setPriorityLabel(toPriorityLabel(PRIORITY_MEDIUM));
+        analysis.setPriorityReason("");
+        analysis.setRiskReason(null);
+        analysis.setReplySuggestions(Collections.emptyList());
         return analysis;
     }
 

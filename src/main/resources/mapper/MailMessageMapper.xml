@@ -58,6 +58,16 @@
         <result column="attachment_original_filename" property="attachmentOriginalFilename"/>
         <result column="attachment_content_type" property="attachmentContentType"/>
         <result column="attachment_file_size" property="attachmentFileSize"/>
+        <result column="spam_flag" property="spamFlag"/>
+        <result column="analysis_status" property="analysisStatus"/>
+        <result column="summary" property="summary"/>
+        <result column="spam_level" property="spamLevel"/>
+        <result column="spam_reason" property="spamReason"/>
+        <result column="risk_level" property="riskLevel"/>
+        <result column="risk_reason" property="riskReason"/>
+        <result column="priority" property="priority"/>
+        <result column="priority_reason" property="priorityReason"/>
+        <result column="reply_suggestions" property="replySuggestions"/>
     </resultMap>
 
     <resultMap id="ThreadListItemRowResultMap" type="com.scut.mailsystem.mapper.row.ThreadListItemRow">
@@ -616,16 +626,27 @@
             recipient.username AS recipient_username,
             recipient.nickname AS recipient_nickname,
             m.sent_at,
-            r.read_flag,
-            m.attachment_file_id,
-            f.original_filename AS attachment_original_filename,
-            f.content_type AS attachment_content_type,
-            f.file_size AS attachment_file_size
+          r.read_flag,
+          m.attachment_file_id,
+          f.original_filename AS attachment_original_filename,
+          f.content_type AS attachment_content_type,
+          f.file_size AS attachment_file_size,
+          a.spam_flag,
+          a.analysis_status,
+          a.summary,
+          a.spam_level,
+          a.spam_reason,
+          a.risk_level,
+          a.risk_reason,
+          a.priority,
+          a.priority_reason,
+          a.reply_suggestions
         FROM mail_message m
         INNER JOIN mail_recipient r ON r.mail_id = m.id
         INNER JOIN sys_user sender ON sender.id = m.sender_id
         INNER JOIN sys_user recipient ON recipient.id = r.recipient_id
         LEFT JOIN file_resource f ON f.file_id = m.attachment_file_id
+        LEFT JOIN mail_analysis a ON a.mail_id = m.id AND a.recipient_id = r.recipient_id
         WHERE COALESCE(m.thread_id, m.id) = #{threadId}
           AND (m.sender_id = #{userId} OR r.recipient_id = #{userId})
         ORDER BY m.sent_at ASC, m.id ASC

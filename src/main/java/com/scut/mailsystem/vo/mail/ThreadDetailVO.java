@@ -11,6 +11,7 @@ public class ThreadDetailVO {
     private String nextCursor;
     private Boolean hasMore;
     private List<MailItemVO> mails;
+    private MailAnalysisVO analysis;
 
     public Long getThreadId() {
         return threadId;
@@ -66,5 +67,13 @@ public class ThreadDetailVO {
 
     public void setMails(List<MailItemVO> mails) {
         this.mails = mails;
+    }
+
+    public MailAnalysisVO getAnalysis() {
+        return analysis;
+    }
+
+    public void setAnalysis(MailAnalysisVO analysis) {
+        this.analysis = analysis;
     }
 }
