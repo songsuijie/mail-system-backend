@@ -5,6 +5,7 @@ import com.scut.mailsystem.mapper.row.MailDetailRow;
 import com.scut.mailsystem.mapper.row.MailListItemRow;
 import com.scut.mailsystem.mapper.row.ThreadListItemRow;
 import com.scut.mailsystem.mapper.row.ThreadMailRow;
+import com.scut.mailsystem.mapper.row.ThreadReplyTextRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -96,4 +97,9 @@ public interface MailMessageMapper {
     List<ThreadMailRow> selectThreadMails(@Param("threadId") Long threadId,
                                           @Param("userId") Long userId,
                                           @Param("limit") Integer limit);
+
+    long countThreadMailsAll(@Param("threadId") Long threadId);
+
+    ThreadReplyTextRow selectLatestThreadReplyText(@Param("threadId") Long threadId,
+                                                   @Param("userId") Long userId);
 }

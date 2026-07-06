@@ -5,6 +5,7 @@ import com.scut.mailsystem.common.PageResult;
 import com.scut.mailsystem.service.mail.MailService;
 import com.scut.mailsystem.vo.mail.ThreadDetailVO;
 import com.scut.mailsystem.vo.mail.ThreadListItemVO;
+import com.scut.mailsystem.vo.mail.ThreadReplyTextData;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -53,5 +54,12 @@ public class ThreadController {
             @RequestParam(value = "cursor", required = false) String cursor,
             @RequestParam(value = "limit", required = false) Integer limit) {
         return ApiResponse.success(mailService.getThreadDetail(authorizationHeader, threadId, cursor, limit));
+    }
+
+    @GetMapping("/{threadId}/reply-text")
+    public ApiResponse<ThreadReplyTextData> getThreadReplyText(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @PathVariable("threadId") Long threadId) {
+        return ApiResponse.success(mailService.getThreadReplyText(authorizationHeader, threadId));
     }
 }

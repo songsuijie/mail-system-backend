@@ -101,6 +101,12 @@
         <result column="attachment_file_size" property="attachmentFileSize"/>
     </resultMap>
 
+    <resultMap id="ThreadReplyTextRowResultMap" type="com.scut.mailsystem.mapper.row.ThreadReplyTextRow">
+        <id column="thread_id" property="threadId"/>
+        <result column="source_mail_id" property="sourceMailId"/>
+        <result column="reply_suggestions" property="replySuggestions"/>
+    </resultMap>
+
     <insert id="insert" parameterType="com.scut.mailsystem.entity.MailMessage"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO mail_message (
@@ -624,5 +630,25 @@
           AND (m.sender_id = #{userId} OR r.recipient_id = #{userId})
         ORDER BY m.sent_at ASC, m.id ASC
         LIMIT #{limit}
+    </select>
+
+    <select id="countThreadMailsAll" resultType="long">
+        SELECT COUNT(1)
+        FROM mail_message m
+        WHERE COALESCE(m.thread_id, m.id) = #{threadId}
+    </select>
+
+    <select id="selectLatestThreadReplyText" resultMap="ThreadReplyTextRowResultMap">
+        SELECT
+            COALESCE(m.thread_id, m.id) AS thread_id,
+            m.id AS source_mail_id,
+            a.reply_suggestions
+        FROM mail_message m
+        INNER JOIN mail_recipient r ON r.mail_id = m.id
+        LEFT JOIN mail_analysis a ON a.mail_id = m.id AND a.recipient_id = r.recipient_id
+        WHERE COALESCE(m.thread_id, m.id) = #{threadId}
+          AND (m.sender_id = #{userId} OR r.recipient_id = #{userId})
+        ORDER BY m.sent_at DESC, m.id DESC
+        LIMIT 1
     </select>
 </mapper>

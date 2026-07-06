@@ -15,6 +15,7 @@ import com.scut.mailsystem.vo.mail.SendEmailData;
 import com.scut.mailsystem.vo.mail.SendMailResponse;
 import com.scut.mailsystem.vo.mail.ThreadDetailVO;
 import com.scut.mailsystem.vo.mail.ThreadListItemVO;
+import com.scut.mailsystem.vo.mail.ThreadReplyTextData;
 
 public interface MailService {
 
@@ -73,4 +74,6 @@ public interface MailService {
                                             String endTime);
 
     ThreadDetailVO getThreadDetail(String authorizationHeader, Long threadId, String cursor, Integer limit);
+
+    ThreadReplyTextData getThreadReplyText(String authorizationHeader, Long threadId);
 }

@@ -21,6 +21,7 @@ import com.scut.mailsystem.mapper.row.MailDetailRow;
 import com.scut.mailsystem.mapper.row.MailListItemRow;
 import com.scut.mailsystem.mapper.row.ThreadListItemRow;
 import com.scut.mailsystem.mapper.row.ThreadMailRow;
+import com.scut.mailsystem.mapper.row.ThreadReplyTextRow;
 import com.scut.mailsystem.mapper.MailAnalysisMapper;
 import com.scut.mailsystem.mapper.MailMessageMapper;
 import com.scut.mailsystem.mapper.MailRecipientMapper;
@@ -46,6 +47,7 @@ import com.scut.mailsystem.vo.mail.SendMailResponse;
 import com.scut.mailsystem.vo.mail.ThreadDetailVO;
 import com.scut.mailsystem.vo.mail.ThreadLastMailVO;
 import com.scut.mailsystem.vo.mail.ThreadListItemVO;
+import com.scut.mailsystem.vo.mail.ThreadReplyTextData;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -546,6 +548,32 @@ public class MailServiceImpl implements MailService {
         detail.setNextCursor(hasMore && !rows.isEmpty() ? String.valueOf(rows.get(rows.size() - 1).getMailId()) : null);
         detail.setMails(toMailItemVOList(rows));
         return detail;
+    }
+
+    @Override
+    public ThreadReplyTextData getThreadReplyText(String authorizationHeader, Long threadId) {
+        SysUser currentUser = getCurrentActiveUser(authorizationHeader);
+        if (threadId == null || threadId <= 0) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR);
+        }
+        if (mailMessageMapper.countThreadMailsAll(threadId) <= 0) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "邮件线程不存在");
+        }
+        if (mailMessageMapper.countThreadMails(threadId, currentUser.getId()) <= 0) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "无权限查看该邮件线程");
+        }
+
+        ThreadReplyTextRow row = mailMessageMapper.selectLatestThreadReplyText(threadId, currentUser.getId());
+        if (row == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "邮件线程不存在");
+        }
+
+        List<String> suggestions = parseReplySuggestions(row.getReplySuggestions());
+        ThreadReplyTextData data = new ThreadReplyTextData();
+        data.setThreadId(row.getThreadId());
+        data.setSourceMailId(row.getSourceMailId());
+        data.setReplyText(suggestions.isEmpty() ? "" : suggestions.get(0));
+        return data;
     }
 
     private SysUser getCurrentActiveUser(String authorizationHeader) {

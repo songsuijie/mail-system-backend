@@ -19,6 +19,7 @@ import com.scut.mailsystem.mapper.SysUserMapper;
 import com.scut.mailsystem.mapper.row.MailDetailRow;
 import com.scut.mailsystem.mapper.row.ThreadListItemRow;
 import com.scut.mailsystem.mapper.row.ThreadMailRow;
+import com.scut.mailsystem.mapper.row.ThreadReplyTextRow;
 import com.scut.mailsystem.service.ai.AiAnalysisService;
 import com.scut.mailsystem.service.ai.RuleAnalysisService;
 import com.scut.mailsystem.service.ai.impl.RuleAnalysisServiceImpl;
@@ -33,6 +34,7 @@ import com.scut.mailsystem.vo.mail.RestoreMailResponse;
 import com.scut.mailsystem.vo.mail.RetryAnalysisResponse;
 import com.scut.mailsystem.vo.mail.ThreadDetailVO;
 import com.scut.mailsystem.vo.mail.ThreadListItemVO;
+import com.scut.mailsystem.vo.mail.ThreadReplyTextData;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -258,6 +260,44 @@ class MailServiceImplTest {
         assertEquals(1002L, detail.getMails().get(1).getMailId());
         assertEquals(1001L, detail.getMails().get(1).getReplyToMailId());
         verify(mailRecipientMapper).markReadIfUnread(eq(1001L), eq(2L), any(LocalDateTime.class));
+    }
+
+    @Test
+    void getThreadReplyText_returnsFirstSuggestionFromLatestVisibleMail() {
+        SysUser bob = activeUser(2L, "bob", "Bob");
+        when(sysUserMapper.selectActiveById(2L)).thenReturn(bob);
+        when(mailMessageMapper.countThreadMailsAll(2001L)).thenReturn(2L);
+        when(mailMessageMapper.countThreadMails(2001L, 2L)).thenReturn(2L);
+        ThreadReplyTextRow row = new ThreadReplyTextRow();
+        row.setThreadId(2001L);
+        row.setSourceMailId(1004L);
+        row.setReplySuggestions("[\"收到，我会尽快处理。\",\"好的，我稍后确认。\"]");
+        when(mailMessageMapper.selectLatestThreadReplyText(2001L, 2L)).thenReturn(row);
+
+        ThreadReplyTextData data = mailService.getThreadReplyText(authHeader(2L, "bob"), 2001L);
+
+        assertEquals(2001L, data.getThreadId());
+        assertEquals(1004L, data.getSourceMailId());
+        assertEquals("收到，我会尽快处理。", data.getReplyText());
+    }
+
+    @Test
+    void getThreadReplyText_returnsEmptyTextWhenLatestMailHasNoSuggestion() {
+        SysUser bob = activeUser(2L, "bob", "Bob");
+        when(sysUserMapper.selectActiveById(2L)).thenReturn(bob);
+        when(mailMessageMapper.countThreadMailsAll(2001L)).thenReturn(1L);
+        when(mailMessageMapper.countThreadMails(2001L, 2L)).thenReturn(1L);
+        ThreadReplyTextRow row = new ThreadReplyTextRow();
+        row.setThreadId(2001L);
+        row.setSourceMailId(1004L);
+        row.setReplySuggestions(null);
+        when(mailMessageMapper.selectLatestThreadReplyText(2001L, 2L)).thenReturn(row);
+
+        ThreadReplyTextData data = mailService.getThreadReplyText(authHeader(2L, "bob"), 2001L);
+
+        assertEquals(2001L, data.getThreadId());
+        assertEquals(1004L, data.getSourceMailId());
+        assertEquals("", data.getReplyText());
     }
 
     @Test

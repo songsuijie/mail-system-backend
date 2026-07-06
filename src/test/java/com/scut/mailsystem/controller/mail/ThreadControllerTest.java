@@ -4,6 +4,7 @@ import com.scut.mailsystem.common.PageResult;
 import com.scut.mailsystem.service.mail.MailService;
 import com.scut.mailsystem.vo.mail.ThreadDetailVO;
 import com.scut.mailsystem.vo.mail.ThreadListItemVO;
+import com.scut.mailsystem.vo.mail.ThreadReplyTextData;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -92,5 +93,24 @@ class ThreadControllerTest {
                 .andExpect(jsonPath("$.data.hasMore").value(false));
 
         verify(mailService).getThreadDetail("Bearer token", 2001L, "1001", 20);
+    }
+
+    @Test
+    void getThreadReplyText_returnsLatestMailReplyText() throws Exception {
+        ThreadReplyTextData data = new ThreadReplyTextData();
+        data.setThreadId(2001L);
+        data.setSourceMailId(1004L);
+        data.setReplyText("收到，我会尽快处理。");
+        when(mailService.getThreadReplyText("Bearer token", 2001L)).thenReturn(data);
+
+        mockMvc.perform(get("/api/threads/2001/reply-text")
+                        .header("Authorization", "Bearer token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.threadId").value(2001))
+                .andExpect(jsonPath("$.data.sourceMailId").value(1004))
+                .andExpect(jsonPath("$.data.replyText").value("收到，我会尽快处理。"));
+
+        verify(mailService).getThreadReplyText("Bearer token", 2001L);
     }
 }
