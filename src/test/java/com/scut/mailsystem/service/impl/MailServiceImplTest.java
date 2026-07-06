@@ -19,6 +19,9 @@ import com.scut.mailsystem.mapper.SysUserMapper;
 import com.scut.mailsystem.mapper.row.MailDetailRow;
 import com.scut.mailsystem.mapper.row.ThreadListItemRow;
 import com.scut.mailsystem.mapper.row.ThreadMailRow;
+import com.scut.mailsystem.service.ai.AiAnalysisService;
+import com.scut.mailsystem.service.ai.RuleAnalysisService;
+import com.scut.mailsystem.service.ai.impl.RuleAnalysisServiceImpl;
 import com.scut.mailsystem.utils.TokenUtils;
 import com.scut.mailsystem.vo.mail.MailDeleteResponse;
 import com.scut.mailsystem.vo.mail.MailDetailVO;
@@ -51,18 +54,31 @@ import static org.mockito.Mockito.when;
 
 class MailServiceImplTest {
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final SysUserMapper sysUserMapper = mock(SysUserMapper.class);
     private final MailMessageMapper mailMessageMapper = mock(MailMessageMapper.class);
     private final MailRecipientMapper mailRecipientMapper = mock(MailRecipientMapper.class);
     private final MailAnalysisMapper mailAnalysisMapper = mock(MailAnalysisMapper.class);
     private final FileResourceMapper fileResourceMapper = mock(FileResourceMapper.class);
+    private final RuleAnalysisService ruleAnalysisService = new RuleAnalysisServiceImpl(objectMapper);
+    private final AiAnalysisService aiAnalysisService = mock(AiAnalysisService.class, invocation ->
+            ruleAnalysisService.analyze(
+                    invocation.getArgument(0, Long.class),
+                    invocation.getArgument(1, Long.class),
+                    invocation.getArgument(2, String.class),
+                    invocation.getArgument(3, String.class),
+                    invocation.getArgument(4, LocalDateTime.class)
+            )
+    );
     private final MailServiceImpl mailService = new MailServiceImpl(
             sysUserMapper,
             mailMessageMapper,
             mailRecipientMapper,
             mailAnalysisMapper,
             fileResourceMapper,
-            new ObjectMapper()
+            objectMapper,
+            aiAnalysisService,
+            ruleAnalysisService
     );
 
     @Test
@@ -394,6 +410,7 @@ class MailServiceImplTest {
         assertEquals(1001L, analysisCaptor.getValue().getMailId());
         assertEquals(2L, analysisCaptor.getValue().getRecipientId());
         assertEquals("SUCCESS", analysisCaptor.getValue().getAnalysisStatus());
+        verify(aiAnalysisService).analyze(eq(1001L), eq(2L), eq("实验报告提交提醒"), any(), any(LocalDateTime.class));
         verify(mailAnalysisMapper, never()).insert(any(MailAnalysis.class));
     }
 

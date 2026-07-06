@@ -193,6 +193,27 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
 ```
 
+### AI 默认模型配置
+
+邮件分析支持 OpenAI Compatible Chat Completions。系统默认模型从环境变量读取，普通用户开启 `aiEnabled` 后可以使用系统默认模型，不需要在用户设置里保存自己的 API Key。
+
+PowerShell 示例：
+
+```powershell
+$env:AI_DEFAULT_API_KEY="your-api-key"
+$env:AI_DEFAULT_BASE_URL="https://llm-dujne1fkrf6fj1k5.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
+$env:AI_DEFAULT_MODEL_NAME="qwen3.6-flash"
+$env:AI_DEFAULT_ENABLED="true"
+```
+
+说明：
+
+- `AI_DEFAULT_API_KEY` 只在本机环境变量中配置，不要写入代码、SQL、README 示例值或 Git 提交。
+- `AI_DEFAULT_BASE_URL` 默认值为阿里云百炼 OpenAI Compatible 地址。
+- `AI_DEFAULT_MODEL_NAME` 默认值为 `qwen3.6-flash`，如果控制台展示的模型 ID 不同，以控制台为准。
+- 用户设置中的自定义模型配置完整时优先使用用户模型；不完整时再尝试系统默认模型。
+- 模型请求失败、超时、返回非 JSON 或枚举值不合法时，后端会回退本地规则分析，不影响发邮件、回复邮件和重新分析接口。
+
 ## Start Backend
 
 在项目根目录执行：
