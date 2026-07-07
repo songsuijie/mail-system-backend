@@ -270,6 +270,33 @@ class MailServiceImplTest {
     }
 
     @Test
+    void getThreadDetail_usesHighestRiskMailAsThreadAnalysisSource() {
+        SysUser bob = activeUser(2L, "bob", "Bob");
+        ThreadMailRow riskyOriginal = threadMailRow(1001L, null, 1L, 2L, 1, "risk", null);
+        riskyOriginal.setSpamLevel("HIGH");
+        riskyOriginal.setRiskLevel("HIGH");
+        riskyOriginal.setRiskReason("risky original");
+        riskyOriginal.setPriority("HIGH");
+        ThreadMailRow safeReply = threadMailRow(1002L, 1001L, 2L, 1L, 1, "safe reply", null);
+        safeReply.setSpamLevel("NONE");
+        safeReply.setRiskLevel("SAFE");
+        safeReply.setPriority("MEDIUM");
+        when(sysUserMapper.selectActiveById(2L)).thenReturn(bob);
+        when(mailMessageMapper.countThreadMails(2001L, 2L)).thenReturn(2L);
+        when(mailMessageMapper.selectThreadMails(2001L, 2L, 20)).thenReturn(List.of(
+                riskyOriginal,
+                safeReply
+        ));
+
+        ThreadDetailVO detail = mailService.getThreadDetail(authHeader(2L, "bob"), 2001L, null, 20);
+
+        assertEquals("HIGH", detail.getAnalysis().getRiskLevel());
+        assertEquals("HIGH", detail.getAnalysis().getSpamLevel());
+        assertEquals("HIGH", detail.getAnalysis().getPriority());
+        assertEquals("risky original", detail.getAnalysis().getRiskReason());
+    }
+
+    @Test
     void getThreadReplyText_returnsFirstSuggestionFromLatestVisibleMail() {
         SysUser bob = activeUser(2L, "bob", "Bob");
         when(sysUserMapper.selectActiveById(2L)).thenReturn(bob);

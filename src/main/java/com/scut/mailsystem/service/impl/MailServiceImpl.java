@@ -955,7 +955,7 @@ public class MailServiceImpl implements MailService {
         if (rows == null || rows.isEmpty()) {
             return defaultMailAnalysisVO();
         }
-        ThreadMailRow latest = rows.get(rows.size() - 1);
+        ThreadMailRow latest = selectThreadAnalysisSource(rows);
         String priority = defaultIfBlank(latest.getPriority(), PRIORITY_MEDIUM);
         String riskLevel = defaultIfBlank(latest.getRiskLevel(), RISK_LEVEL_SAFE);
         String spamLevel = defaultIfBlank(latest.getSpamLevel(), SPAM_LEVEL_NONE);
@@ -975,6 +975,37 @@ public class MailServiceImpl implements MailService {
         analysis.setRiskReason(latest.getRiskReason());
         analysis.setReplySuggestions(parseReplySuggestions(latest.getReplySuggestions()));
         return analysis;
+    }
+
+    private ThreadMailRow selectThreadAnalysisSource(List<ThreadMailRow> rows) {
+        ThreadMailRow selected = rows.get(0);
+        int selectedScore = analysisDisplayScore(selected);
+        for (int index = 1; index < rows.size(); index++) {
+            ThreadMailRow current = rows.get(index);
+            int currentScore = analysisDisplayScore(current);
+            if (currentScore >= selectedScore) {
+                selected = current;
+                selectedScore = currentScore;
+            }
+        }
+        return selected;
+    }
+
+    private int analysisDisplayScore(ThreadMailRow row) {
+        return severityScore(row.getRiskLevel())
+                + severityScore(row.getSpamLevel())
+                + severityScore(row.getPriority());
+    }
+
+    private int severityScore(String value) {
+        String normalized = defaultIfBlank(value, "");
+        if (RISK_LEVEL_HIGH.equals(normalized) || SPAM_LEVEL_HIGH.equals(normalized) || PRIORITY_HIGH.equals(normalized)) {
+            return 2;
+        }
+        if (RISK_LEVEL_MEDIUM.equals(normalized) || SPAM_LEVEL_MEDIUM.equals(normalized) || PRIORITY_MEDIUM.equals(normalized)) {
+            return 1;
+        }
+        return 0;
     }
 
     private MailAnalysisVO defaultMailAnalysisVO() {

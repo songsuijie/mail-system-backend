@@ -439,6 +439,8 @@
     <select id="selectDetailByMailId" resultMap="MailDetailRowResultMap">
         SELECT
             m.id AS mail_id,
+            m.thread_id,
+            m.reply_to_mail_id,
             m.subject,
             m.content,
             m.sender_id,
@@ -493,7 +495,8 @@
             INNER JOIN mail_recipient r ON r.mail_id = m.id
             INNER JOIN sys_user sender ON sender.id = m.sender_id
             LEFT JOIN mail_analysis a ON a.mail_id = m.id AND a.recipient_id = r.recipient_id
-            WHERE (m.sender_id = #{userId} OR r.recipient_id = #{userId})
+            WHERE r.recipient_id = #{userId}
+              AND r.deleted_flag = 0
             <if test="keyword != null">
               AND (
                 m.subject LIKE CONCAT('%', #{keyword}, '%')
@@ -555,7 +558,8 @@
             INNER JOIN mail_recipient r ON r.mail_id = m.id
             INNER JOIN sys_user sender ON sender.id = m.sender_id
             LEFT JOIN mail_analysis a ON a.mail_id = m.id AND a.recipient_id = r.recipient_id
-            WHERE (m.sender_id = #{userId} OR r.recipient_id = #{userId})
+            WHERE r.recipient_id = #{userId}
+              AND r.deleted_flag = 0
             <if test="keyword != null">
               AND (
                 m.subject LIKE CONCAT('%', #{keyword}, '%')
@@ -590,7 +594,7 @@
             FROM mail_message m2
             INNER JOIN mail_recipient r2 ON r2.mail_id = m2.id
             WHERE COALESCE(m2.thread_id, m2.id) = base.thread_id
-              AND (m2.sender_id = #{userId} OR r2.recipient_id = #{userId})
+              AND (m2.sender_id = #{userId} OR (r2.recipient_id = #{userId} AND r2.deleted_flag = 0))
             ORDER BY m2.sent_at DESC, m2.id DESC
             LIMIT 1
         )
